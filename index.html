@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palavra da Vez – Online</title>
+<style>
+
+:root{--bg:#f6f5fb;--card:#fff;--tx:#1c1b29;--mut:#6b6a80;--ac:#7c3aed;--ok:#16a34a;--bad:#b91c1c;--bd:#e3e1f0}
+@media(prefers-color-scheme:dark){:root{--bg:#14131d;--card:#1f1e2c;--tx:#eeedf7;--mut:#9a98b3;--ac:#a78bfa;--ok:#4ade80;--bad:#f87171;--bd:#34324a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,sans-serif}
+main{padding:20px}
+#shell{max-width:760px;margin:0 auto}
+h1{font-size:1.3rem;margin:0 0 12px}h1 small{color:var(--mut);font-weight:400}
+button{font:inherit;border:0;border-radius:10px;padding:8px 14px;background:var(--ac);color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+#score{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;font-size:.9rem}
+.chip b{color:var(--ac)}
+.word{background:var(--ac);color:#fff;border-radius:16px;padding:18px;text-align:center;margin-bottom:16px}
+.word span{display:block;font-size:.85rem;opacity:.85}
+.word b{display:block;font-size:3rem;text-transform:uppercase;letter-spacing:.05em}
+#timer{font-size:1.4rem;font-weight:700;min-height:1.6em}
+.pr{display:flex;gap:8px;align-items:center;margin:8px 0}
+.pr label{width:70px;font-weight:600}
+.pr .s{width:110px;font-size:.85rem;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.card.now{border:2px solid var(--ac)}
+.row{display:flex;gap:12px;align-items:center}
+.row img{width:84px;height:84px;border-radius:10px;background:var(--bd)}
+.t{font-weight:700}.a{color:var(--mut);font-size:.9rem}
+.by{font-size:.9rem;margin-top:2px}.dup{color:var(--bad);font-weight:600}
+.bar{height:6px;background:var(--bd);border-radius:3px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--ac)}
+.vd{font-weight:600;margin-top:10px}.good{color:var(--ok)}.nope{color:var(--bad)}
+.pl{font-style:italic;margin:4px 0}
+mark{background:#fde04766;color:inherit;border-radius:3px;padding:0 2px}
+.vr{display:flex;align-items:center;gap:6px;margin:4px 0;flex-wrap:wrap}.vr b{width:70px}
+.vb{background:var(--bd);color:var(--tx);padding:5px 10px}
+.vb.on.neu{background:var(--mut);color:#fff}
+.vb.on.up{background:var(--ok);color:#fff}.vb.on.dn{background:var(--bad);color:#fff}
+.res{font-weight:700;margin-top:8px}
+.sum{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:12px 0}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ghost{background:var(--bd);color:var(--tx)}
+#cd{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;z-index:10}
+#cd[hidden]{display:none}
+#cdl{font-size:1.2rem;margin-bottom:8px}
+#cdn{font-size:8rem;font-weight:800;line-height:1.1;min-height:1.1em}
+#cdn.pop{animation:pop .5s ease-out}
+@keyframes pop{from{transform:scale(1.7);opacity:0}to{transform:scale(1);opacity:1}}
+select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);width:100%;margin-top:4px}
+.pr{flex-wrap:wrap}.pr input{flex:1;min-width:120px;width:auto}
+#setup h2{margin:0 0 4px;font-size:1.15rem}
+.fld{margin-top:14px}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+header h1{margin:0}
+#me{display:flex;align-items:center;gap:8px;font-size:.9rem}
+#me img{width:28px;height:28px;border-radius:50%}
+.tw{background:#9146ff;font-size:1.05rem;padding:12px 20px}
+.big{font-size:2.4rem;font-weight:800;letter-spacing:.25em;color:var(--ac)}
+.pl{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:4px 10px;margin:3px}
+.pl img{width:22px;height:22px;border-radius:50%}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;z-index:20;max-width:90%}
+#toast[hidden]{display:none}
+section[hidden],div[hidden]{display:none}
+.pr input{min-width:110px}
+#cd{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;z-index:10}
+#cdl{font-size:1.2rem;margin-bottom:8px}
+#cdn{font-size:8rem;font-weight:800;line-height:1.1;min-height:1.1em}
+#cdn.pop{animation:pop .5s ease-out}
+@keyframes pop{from{transform:scale(1.7);opacity:0}to{transform:scale(1);opacity:1}}
+.rk{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.rk:last-of-type{border-bottom:0}
+.rk .pos{width:34px;text-align:center;font-size:1.2rem}
+.rk img,.rk .ini{width:40px;height:40px;border-radius:50%;flex:none;object-fit:cover;background:var(--bd)}
+.rk .ini{display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:var(--ac)}
+.rk .nm{flex:1;font-weight:600}
+.wrate{margin-top:8px;font-size:.95rem}
+.wb{background:#fff3;color:#fff;padding:4px 12px;margin:0 3px}
+.wb.on{background:#fff;color:var(--ac)}
+header{flex-wrap:wrap}
+#vol{display:flex;align-items:center;gap:6px}
+#vol button{padding:4px 10px;font-size:1.05rem}
+#vol input[type=range]{width:90px;padding:0;border:0;background:transparent;accent-color:var(--ac)}
+.chat{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-top:16px}
+#chatlog{max-height:220px;min-height:60px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:10px 0;padding-right:4px}
+.msg{font-size:.92rem;word-break:break-word}
+.msg.me b{color:var(--ac)}
+.chatrow{display:flex;gap:8px}
+.bubble{position:relative;margin:18px 0 10px;background:var(--bg);border:2px solid var(--ac);border-radius:16px;padding:12px 16px}
+.bubble::before{content:"";position:absolute;top:-9px;left:28px;width:14px;height:14px;background:var(--bg);border-left:2px solid var(--ac);border-top:2px solid var(--ac);transform:rotate(45deg)}
+.bubble summary{cursor:pointer;font-weight:700}
+.bubble ol{margin:8px 0 0;padding-left:20px}
+.bubble li{margin:7px 0}
+.bubble .tip{margin-top:8px;font-size:.88rem;color:var(--mut)}
+.chk{display:flex;gap:8px;align-items:flex-start;margin-top:14px;cursor:pointer}
+.chk input{width:auto;margin-top:4px}
+#timer.urgent{color:#ffe08a}
+.flash{display:inline-block;background:#0003;border-radius:10px;padding:2px 10px;margin-left:8px;font-size:1rem}
+.sg-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--bd)}
+.sg-item:last-child{border-bottom:0}
+.sg-item select{width:auto;margin:0;padding:6px}
+.sg-st{font-size:.9rem}
+#shell.room{max-width:1360px;display:grid;grid-template-columns:230px minmax(0,760px) 320px;gap:20px;justify-content:center;align-items:start}
+#colL,#colR{position:sticky;top:16px;min-width:0}
+#colL[hidden],#colR[hidden]{display:none}
+#plist{display:flex;flex-direction:column;gap:8px}
+.pside{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid transparent;transition:opacity .25s,transform .25s}
+.pside img,.pside .ini{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;background:var(--bd)}
+.pside .ini{display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:var(--ac)}
+.pside .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.pside .sc{font-size:.8rem;color:var(--mut);white-space:nowrap}
+.pside.me{background:var(--card);border-color:var(--bd)}
+.pside.me img,.pside.me .ini{width:46px;height:46px}
+/* holofote no jogador cuja música está tocando */
+@keyframes spotpulse{0%,100%{box-shadow:0 0 0 2px var(--ac),0 0 14px 2px rgba(167,139,250,.45)}50%{box-shadow:0 0 0 2px var(--ac),0 0 32px 10px rgba(167,139,250,.8)}}
+.pside.spot{background:radial-gradient(130% 150% at 12% 50%,rgba(167,139,250,.6),rgba(167,139,250,.08) 72%);transform:scale(1.06);animation:spotpulse 1.4s ease-in-out infinite}
+.pside.spot .nm::after{content:" 🎵"}
+#colL.spotting .pside:not(.spot){opacity:.4}
+@media(prefers-reduced-motion:reduce){.pside.spot{animation:none;box-shadow:0 0 0 2px var(--ac),0 0 22px 6px rgba(167,139,250,.6)}}
+.chatpanel{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px}
+.chatwrap{display:flex;flex-direction:column;height:calc(100vh - 120px);min-height:320px}
+.chatpanel #chatlog{flex:1;max-height:none}
+@media(max-width:1100px){
+  #shell.room{display:block;max-width:760px}
+  #colL{position:static;margin-bottom:12px}
+  #plist{flex-direction:row;flex-wrap:wrap;gap:6px}
+  .pside{padding:4px 10px;background:var(--card);border-color:var(--bd)}
+  .pside img,.pside .ini,.pside.me img,.pside.me .ini{width:28px;height:28px}
+  #colR{position:static;margin-top:16px}
+  .chatwrap{height:360px}
+}
+#lang{width:auto;margin:0;padding:6px 8px}
+</style>
+</head>
+<body>
+<div id="cd" hidden><div><div id="cdl"></div><div id="cdn"></div></div></div>
+<div id="toast" hidden></div>
+<main>
+<div id="shell">
+<aside id="colL" hidden><div class="a" style="margin-bottom:8px">Jogadores</div><div id="plist"></div></aside>
+<div id="colC">
+<header><h1>🎵 Palavra da Vez <small>online</small></h1><select id="lang" aria-label="Idioma / Language"><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select><div id="vol"><button class="ghost" id="mute" title="Ligar/desligar o som" aria-label="Ligar ou desligar o som">🔊</button><input type="range" id="volr" min="0" max="100" step="5" aria-label="Volume"></div><div id="me"></div></header>
+
+<!-- LOGIN -->
+<section id="v-login" class="sum" hidden>
+  <h2 style="margin-top:0">Entre para jogar</h2>
+  <p class="a">O login é feito pela sua conta da Twitch. Seu nome e foto de perfil aparecem para os outros jogadores.</p>
+  <div id="fileWarn" class="nope" hidden>⚠ Você abriu o arquivo direto do disco (file://). O login da Twitch só funciona por um endereço http — veja as instruções.</div>
+  <button class="tw" id="tw">Entrar com a Twitch</button>
+</section>
+
+<!-- INÍCIO: criar / entrar -->
+<section id="v-home" hidden>
+  <div id="resume" class="sum" hidden></div>
+  <div class="grid">
+    <div class="sum">
+      <h2 style="margin-top:0">Criar sala <small class="a">(admin)</small></h2>
+      <div class="a">Você define as regras e controla o ritmo da partida.</div>
+      <div class="fld"><b>Dificuldade das palavras</b>
+        <select id="lvl"><option value="facil">Fácil — palavras muito comuns</option><option value="medio">Médio — comuns, mas menos óbvias</option><option value="dificil">Difícil — palavras raras em letras</option></select></div>
+      <div class="fld"><b>Tempo para escolher a música</b>
+        <select id="secs"><option value="10">10 segundos</option><option value="15">15 segundos</option><option value="20" selected>20 segundos</option><option value="30">30 segundos</option><option value="45">45 segundos</option><option value="60">60 segundos</option></select></div>
+      <div class="fld"><b>Número de turnos</b>
+        <select id="turns"><option value="3">3 turnos (partida rápida)</option><option value="5">5 turnos</option><option value="8">8 turnos</option><option value="10" selected>10 turnos</option><option value="15">15 turnos</option><option value="20">20 turnos (partida longa)</option></select></div>
+      <label class="chk"><input type="checkbox" id="battle"><span><b>⚡ Modo Battle Royale</b><br><span class="a">Cada vez que alguém envia a música, o tempo restante dos outros diminui.</span></span></label>
+      <div class="ctl"><button id="create">Criar sala</button></div>
+    </div>
+    <div class="sum">
+      <h2 style="margin-top:0">Entrar numa sala</h2>
+      <div class="a">Digite o código de 4 letras que o admin passou.</div>
+      <div class="fld"><input id="code" maxlength="4" placeholder="ABCD" style="text-transform:uppercase;letter-spacing:.3em;font-size:1.4rem;text-align:center"></div>
+      <div class="ctl"><button id="join">Entrar</button></div>
+    </div>
+  </div>
+  <details id="sugHomeBox" class="sum" style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">💡 Sugerir uma palavra para o sorteio</summary><div id="sugHome"></div></details>
+  <div id="admPanel" class="sum" style="margin-top:12px" hidden><h2 style="margin-top:0">🛡️ Moderar sugestões <span id="admCount" class="a"></span></h2><div id="admList"></div></div>
+</section>
+
+<!-- SALA -->
+<section id="v-room" hidden>
+  <div id="roominfo" class="a" style="margin-bottom:8px"></div>
+
+  <div id="a-lobby" class="sum" hidden>
+    <div class="a">Código da sala</div>
+    <div class="big" id="lobbycode"></div>
+    <div class="a" style="margin:8px 0">Jogadores na sala:</div>
+    <div id="lobbyplayers"></div>
+    <details id="howto" open class="bubble"><summary>💡 Como jogar</summary><div id="howbody"></div></details>
+    <details id="sugLobbyBox" class="chat"><summary style="cursor:pointer;font-weight:600">💡 Sugerir uma palavra para o sorteio</summary><div id="sugLobby"></div></details>
+    <div class="ctl"><button id="start" hidden>▶ Iniciar partida</button><span id="waitHost" class="a" hidden>Aguardando o admin iniciar…</span></div>
+  </div>
+
+  <div id="a-play" hidden>
+    <div id="score"></div>
+    <div class="word"><span id="turnlbl"></span><b id="word"></b><div id="langs" style="font-size:.95rem;opacity:.9"></div><div id="timer"></div><div id="wrate" class="wrate" hidden>Gostou desta palavra? <button class="wb" id="wup">👍</button><button class="wb" id="wdn">👎</button> <span id="wcnt" style="opacity:.85"></span></div></div>
+    <div id="inbox" hidden></div>
+    <div id="reveal" hidden><div id="cards"></div><div id="sum"></div><div class="ctl"><button id="nextnow" hidden>Próximo turno agora</button></div></div>
+  </div>
+
+  <div id="a-end" class="sum" hidden></div>
+
+  <details id="hist" style="margin-top:16px"><summary style="cursor:pointer;font-weight:600">Histórico de palavras</summary><div id="histbody"></div></details>
+  <div class="ctl"><button class="ghost" id="leave">Sair da sala</button></div>
+</section>
+</div>
+<aside id="colR" hidden>
+  <details id="chatbox" open class="chatpanel"><summary style="cursor:pointer;font-weight:600">💬 Chat <span id="chatbadge" class="a"></span></summary>
+    <div class="chatwrap"><div id="chatlog"></div>
+    <div class="chatrow"><input id="chatin" maxlength="300" placeholder="Escreva uma mensagem…" autocomplete="off"><button id="chatsend">Enviar</button></div></div>
+  </details>
+</aside>
+</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SB_URL='https://mqnwstppbzrdjygvgzbj.supabase.co',SB_KEY='sb_publishable_wIJ5uBrN_i1n-VMqoMYJ8A_Li12UJh6';
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+const LEVELS={
+ facil:{label:'Fácil',w:{
+  amor:['amor','love'],'coração':['coração','heart','corazón'],vida:['vida','life'],noite:['noite','night','noche'],
+  sol:['sol','sun'],lua:['lua','moon','luna'],tempo:['tempo','time','tiempo'],'céu':['céu','sky','cielo'],
+  estrela:['estrela','star','estrella'],sonho:['sonho','dream','sueño'],saudade:['saudade','saudades','nostalgia','longing'],
+  luz:['luz','light'],'dança':['dança','dance','danza','baile'],chuva:['chuva','rain','lluvia'],mar:['mar','sea','ocean'],
+  flor:['flor','flower'],festa:['festa','party','fiesta'],praia:['praia','beach','playa'],beijo:['beijo','kiss','beso'],
+  mulher:['mulher','woman','mujer'],dia:['dia','day','día'],
+  'alma':['alma','soul'],'olho':['olho','eye','ojo'],'mão':['mão','hand','mano'],'paixão':['paixão','passion','pasión'],
+  verdade:['verdade','truth','verdad'],homem:['homem','man','hombre'],felicidade:['felicidade','happiness','felicidad'],
+  tristeza:['tristeza','sadness','tristeza'],'ciúme':['ciúme','jealousy','celos'],medo:['medo','fear','miedo'],
+  dor:['dor','pain','dolor'],mundo:['mundo','world'],rei:['rei','king','rey'],cor:['cor','color','colour'],
+  liberdade:['liberdade','freedom','libertad'],'esperança':['esperança','hope','esperanza'],fim:['fim','end','fin'],
+  'canção':['canção','song','canción'],'música':['música','music'],voz:['voz','voice'],'lágrima':['lágrima','tear','lágrima'],
+  sorte:['sorte','luck','suerte'],alegria:['alegria','joy','alegría'],'abraço':['abraço','hug','abrazo']}},
+ medio:{label:'Médio',w:{
+  fogo:['fogo','fire','fuego'],vento:['vento','wind','viento'],cidade:['cidade','city','ciudad'],rua:['rua','street','calle'],
+  rio:['rio','river'],'verão':['verão','summer','verano'],sorriso:['sorriso','smile','sonrisa'],dinheiro:['dinheiro','money','dinero'],
+  sombra:['sombra','shadow'],estrada:['estrada','road','camino','carretera'],janela:['janela','window','ventana'],
+  chave:['chave','key','llave'],porta:['porta','door','puerta'],ponte:['ponte','bridge','puente'],carro:['carro','car','coche'],
+  'relógio':['relógio','clock','reloj'],trem:['trem','train','tren'],casa:['casa','house','home'],menina:['menina','girl','niña','chica'],
+  amigo:['amigo','friend'],inverno:['inverno','winter','invierno'],
+  menino:['menino','boy','niño'],cabelo:['cabelo','hair','cabello'],jardim:['jardim','garden','jardín'],
+  'pássaro':['pássaro','bird','pájaro'],cachorro:['cachorro','dog','perro'],gato:['gato','cat'],
+  floresta:['floresta','forest','bosque','selva'],neve:['neve','snow','nieve'],vinho:['vinho','wine','vino'],
+  cerveja:['cerveja','beer','cerveza'],'café':['café','coffee'],telefone:['telefone','phone','teléfono'],
+  cama:['cama','bed'],palavra:['palavra','word','palabra'],'história':['história','story','historia'],
+  escola:['escola','school','escuela'],igreja:['igreja','church','iglesia'],'avião':['avião','plane','airplane','avión'],
+  'praça':['praça','square','plaza'],madrugada:['madrugada','dawn'],esquina:['esquina','corner'],bola:['bola','ball','balón'],
+  'rádio':['rádio','radio'],barulho:['barulho','noise','ruido']}},
+ dificil:{label:'Difícil',w:{
+  espelho:['espelho','mirror','espejo'],navio:['navio','ship','barco'],bandeira:['bandeira','flag','bandera'],
+  montanha:['montanha','mountain','montaña'],deserto:['deserto','desert','desierto'],tempestade:['tempestade','storm','tormenta'],
+  'ladrão':['ladrão','thief','ladrón'],anjo:['anjo','angel','ángel'],tesouro:['tesouro','treasure','tesoro'],
+  veneno:['veneno','poison','venom'],cavalo:['cavalo','horse','caballo'],ilha:['ilha','island','isla'],
+  diamante:['diamante','diamond'],segredo:['segredo','secret','secreto'],'prisão':['prisão','prison','prisión'],
+  aranha:['aranha','spider','araña'],'relâmpago':['relâmpago','lightning','relámpago'],fantasma:['fantasma','ghost'],
+  ouro:['ouro','gold','oro'],cinzas:['cinzas','ashes','cenizas'],sereia:['sereia','mermaid','sirena'],
+  labirinto:['labirinto','maze','labyrinth','laberinto'],corrente:['corrente','chain','cadena'],coroa:['coroa','crown','corona'],
+  espada:['espada','sword'],castelo:['castelo','castle','castillo'],'dragão':['dragão','dragon','dragón'],
+  serpente:['serpente','snake','serpent','serpiente'],lobo:['lobo','wolf'],corvo:['corvo','crow','raven','cuervo'],
+  'cemitério':['cemitério','cemetery','graveyard','cementerio'],'vulcão':['vulcão','volcano','volcán'],eclipse:['eclipse'],
+  cometa:['cometa','comet'],neblina:['neblina','fog','mist','niebla'],abismo:['abismo','abyss'],enigma:['enigma','riddle'],
+  pirata:['pirata','pirate'],bruxa:['bruxa','witch','bruja'],'âncora':['âncora','anchor','ancla'],
+  farol:['farol','lighthouse','faro'],'trovão':['trovão','thunder','trueno'],'furacão':['furacão','hurricane','huracán'],
+  caverna:['caverna','cave','cueva'],armadilha:['armadilha','trap','trampa']}}
+};
+const WORDS=Object.assign({},...Object.values(LEVELS).map(l=>l.w));
+
+
+const COUNT_SECS=3,TURNS=10,SONG_MS=20000;
+const $=id=>document.getElementById(id);
+const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clean=s=>s.replace(/\s*[\(\[].*?[\)\]]/g,'').replace(/\s+-\s+.*$/,'').trim();
+function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3500)}
+/* ---------- idiomas (PT / EN / ES) ---------- */
+const LANGS={pt:'Português',en:'English',es:'Español'},LOC={pt:'pt-BR',en:'en-US',es:'es-ES'};
+let LANG='pt';
+try{const sv=localStorage.getItem('pdv_lang'),nv=(navigator.language||'pt').slice(0,2).toLowerCase();LANG=LANGS[sv]?sv:(LANGS[nv]?nv:'pt')}catch(e){}
+const I18N={"en": {"Jogadores": "Players", "🎵 Palavra da Vez": "🎵 Word of the Turn", "Palavra da Vez – Online": "Word of the Turn – Online", "Entre para jogar": "Sign in to play", "O login é feito pela sua conta da Twitch. Seu nome e foto de perfil aparecem para os outros jogadores.": "Sign-in uses your Twitch account. Your name and profile picture are shown to the other players.", "⚠ Você abriu o arquivo direto do disco (file://). O login da Twitch só funciona por um endereço http — veja as instruções.": "⚠ You opened the file straight from disk (file://). Twitch sign-in only works from an http address — see the instructions.", "Entrar com a Twitch": "Sign in with Twitch", "Criar sala": "Create room", "Você define as regras e controla o ritmo da partida.": "You set the rules and control the pace of the game.", "Dificuldade das palavras": "Word difficulty", "Fácil — palavras muito comuns": "Easy — very common words", "Médio — comuns, mas menos óbvias": "Medium — common, but less obvious", "Difícil — palavras raras em letras": "Hard — words rarely found in lyrics", "Tempo para escolher a música": "Time to choose the song", "10 segundos": "10 seconds", "15 segundos": "15 seconds", "20 segundos": "20 seconds", "30 segundos": "30 seconds", "45 segundos": "45 seconds", "60 segundos": "60 seconds", "Número de turnos": "Number of turns", "3 turnos (partida rápida)": "3 turns (quick game)", "5 turnos": "5 turns", "8 turnos": "8 turns", "10 turnos": "10 turns", "15 turnos": "15 turns", "20 turnos (partida longa)": "20 turns (long game)", "⚡ Modo Battle Royale": "⚡ Battle Royale mode", "Cada vez que alguém envia a música, o tempo restante dos outros diminui.": "Every time someone submits a song, everyone else's remaining time shrinks.", "Entrar numa sala": "Join a room", "Digite o código de 4 letras que o admin passou.": "Enter the 4-letter code the admin shared.", "Entrar": "Join", "💡 Sugerir uma palavra para o sorteio": "💡 Suggest a word for the draw", "🛡️ Moderar sugestões": "🛡️ Review suggestions", "Código da sala": "Room code", "Jogadores na sala:": "Players in the room:", "💡 Como jogar": "💡 How to play", "▶ Iniciar partida": "▶ Start game", "Aguardando o admin iniciar…": "Waiting for the admin to start…", "Gostou desta palavra?": "Like this word?", "Próximo turno agora": "Next turn now", "Histórico de palavras": "Word history", "Sair da sala": "Leave room", "Enviar": "Send", "Ligar/desligar o som": "Turn sound on/off", "Ligar ou desligar o som": "Turn sound on or off", "Escreva uma mensagem…": "Write a message…", "Sala não encontrada.": "Room not found.", "Essa partida já começou.": "That game has already started.", "Sala cheia (máx. 12).": "Room is full (max. 12).", "Tempo esgotado.": "Time is up.", "Não é hora de enviar.": "It is not time to submit.", "Você não vota na sua música.": "You can't vote on your own song.", "Essa palavra já foi sugerida.": "That word has already been suggested.", "Use uma palavra só, só com letras (2 a 24).": "Use a single word, letters only (2 to 24).", "Você já tem 5 sugestões aguardando aprovação.": "You already have 5 suggestions waiting for approval.", "Só o moderador pode fazer isso.": "Only the moderator can do that.", "Sugestão não encontrada ou já avaliada.": "Suggestion not found or already reviewed.", "A partida já começou.": "The game has already started.", "Escolha de 1 a 20 turnos.": "Choose 1 to 20 turns.", "O chat fica pausado enquanto as músicas são escolhidas.": "Chat is paused while songs are being chosen.", "Devagar! Aguarde alguns segundos.": "Slow down! Wait a few seconds.", "Mensagem inválida.": "Invalid message.", "Só dá para avaliar palavras que você já jogou.": "You can only rate words you have already played.", "Você já respondeu neste turno.": "You already answered this turn.", "Todos já responderam — não dá mais para alterar.": "Everyone has answered — you can no longer change it.", "tempo esgotado": "timed out", "falha de conexão": "connection failed", "sem conexão com os catálogos": "could not reach the song catalogs", "Sair": "Log out", "Fácil": "Easy", "Médio": "Medium", "Difícil": "Hard", "Sugira uma palavra para o sorteio. Depois de aprovada pela moderação, ela entra na lista e pode aparecer nas partidas.": "Suggest a word for the draw. Once approved by the moderation, it joins the list and can show up in games.", "Palavra (português)": "Word (Portuguese)", "ex.: pipoca": "e.g.: pipoca", "ex.: popcorn": "e.g.: popcorn", "ex.: palomitas": "e.g.: palomitas", "Em inglês": "In English", "Em espanhol": "In Spanish", "(opcional)": "(optional)", "Nível sugerido": "Suggested level", "Uma palavra só, sem espaços (2 a 24 letras). Com as traduções, a palavra também vale em inglês e espanhol.": "A single word, no spaces (2 to 24 letters). With translations, the word also counts in English and Spanish.", "Enviar sugestão": "Send suggestion", "As traduções também precisam ser uma palavra só, só com letras.": "Translations must also be a single word, letters only.", "Essa palavra já existe no jogo.": "That word already exists in the game.", "Sugestão enviada! Ela entra no sorteio depois de aprovada.": "Suggestion sent! It joins the draw once approved.", "⏳ aguardando aprovação": "⏳ awaiting approval", "✅ aprovada": "✅ approved", "❌ recusada": "❌ rejected", "Suas sugestões:": "Your suggestions:", "({n} pendente)": "({n} pending)", "({n} pendentes)": "({n} pending)", "sem traduções": "no translations", "— por {a}": "— by {a}", "✅ Aprovar": "✅ Approve", "❌ Recusar": "❌ Reject", "Nenhuma sugestão pendente.": "No pending suggestions.", "Palavra aprovada!": "Word approved!", "Sugestão recusada.": "Suggestion rejected.", "Você está na sala <b>{code}</b>. <button id=\"back\">Voltar para a sala</button>": "You are in room <b>{code}</b>. <button id=\"back\">Back to the room</button>", "Digite o código de 4 letras.": "Enter the 4-letter code.", "({n} nova)": "({n} new)", "({n} novas)": "({n} new)", "(todos: 👍 {up} · 👎 {down})": "(everyone: 👍 {up} · 👎 {down})", "Sair da sala definitivamente?": "Leave the room for good?", "Chat pausado durante a escolha das músicas": "Chat paused while songs are being chosen", "Sala {code} · {level} · {turns} turnos · {secs}s para escolher a música": "Room {code} · {level} · {turns} turns · {secs}s to choose the song", "Vale em PT · EN · ES: ": "Counts in PT · EN · ES: ", "Turno {turn}/{total} · {level} · palavra da vez": "Turn {turn}/{total} · {level} · word of the turn", "Você": "You", "Banda / artista": "Band / artist", "Música": "Song", "Desistir": "Give up", "✏️ Alterar música": "✏️ Change song", "Cancelar": "Cancel", "editando…": "editing…", "Sua música atual (<b>{track}</b> — {artist}) continua valendo até você enviar a nova.": "Your current song (<b>{track}</b> — {artist}) stays valid until you submit the new one.", "✔ enviada": "✔ sent", "desistiu": "gave up", "Sua escolha: <b>{track}</b> — {artist}": "Your pick: <b>{track}</b> — {artist}", "Você desistiu deste turno (0 pontos).": "You gave up this turn (0 points).", "Envios: ": "Submissions: ", "Desistir deste turno? Você fica com 0 pontos nele.": "Give up this turn? You get 0 points for it.", "Preencha banda e música": "Fill in band and song", "Procurando…": "Searching…", "Não achei — confira banda e música": "Not found — check band and song", "Erro: ": "Error: ", "Música alterada!": "Song changed!", "▶ Tocar 20s": "▶ Play 20s", "Ninguém enviou música neste turno.": "Nobody submitted a song this turn.", "Não enviaram (0 pts): <b>{names}</b>": "Did not submit (0 pts): <b>{names}</b>", "<b>Pontos do turno:</b> {list}": "<b>Turn points:</b> {list}", "Escolhida por: <b>{names}</b> ": "Picked by: <b>{names}</b> ", "⚠ música repetida — pontuação reduzida": "⚠ repeated song — reduced score", "Conferindo a letra…": "Checking the lyrics…", "⚠ Letra não encontrada (sem checagem automática)": "⚠ Lyrics not found (no automatic check)", "✔ A letra contém “{h}”": "✔ The lyrics contain “{h}”", "✘ A letra NÃO contém: {forms}": "✘ The lyrics do NOT contain: {forms}", "👍 Correta": "👍 Correct", "🤷 Não conheço": "🤷 Don't know it", "👎 Errada": "👎 Wrong", "Esta é a sua música — os outros avaliam.": "This is your song — the others vote.", "✔ Aceita (base {base} + {bonus} de bônus)": "✔ Accepted (base {base} + {bonus} bonus)", "✘ Recusada — 0 pts": "✘ Rejected — 0 pts", "🏆 Ranking final": "🏆 Final ranking", "Jogar de novo com os mesmos jogadores": "Play again with the same players", "Dificuldade": "Difficulty", "▶ Jogar novamente": "▶ Play again", "A sala <b>{code}</b> continua aberta. Aguardando o admin começar uma nova partida…": "Room <b>{code}</b> is still open. Waiting for the admin to start a new game…", "Nenhum turno ainda.": "No turns yet.", "Sorteadas: <b>{list}</b>": "Drawn: <b>{list}</b>", "<b>Turno {t} · {w}</b>": "<b>Turn {t} · {w}</b>", "recusada": "rejected", "Ninguém enviou": "Nobody submitted", "Turno {turn}/{total} — prepare-se!": "Turn {turn}/{total} — get ready!", "VAI!": "GO!", "Todos responderam — revelando…": "Everyone answered — revealing…", "Aguardando envios…": "Waiting for submissions…", "Ouvindo {i}/{n} · votação encerra em {s}s": "Listening {i}/{n} · voting ends in {s}s", "Votação encerra em {s}s": "Voting ends in {s}s", "Próximo turno em {s}s": "Next turn in {s}s", "{x} segundos": "{x} seconds", "<b>A palavra da vez.</b> A cada turno sai uma palavra (por exemplo, <i>chuva</i>). Ela vale em <b>português, inglês e espanhol</b>: <i>chuva</i>, <i>rain</i> e <i>lluvia</i>. A partida tem <b>{turns} turnos</b>, no nível <b>{level}</b>.": "<b>The word of the turn.</b> Each turn a word is drawn (for example, <i>rain</i>). It counts in <b>Portuguese, English and Spanish</b>: <i>chuva</i>, <i>rain</i> and <i>lluvia</i>. The game has <b>{turns} turns</b>, at <b>{level}</b> level.", "<b>Escolha uma música.</b> Você tem <b>{secs} segundos</b> para digitar a <b>banda</b> e o <b>nome da música</b> cuja letra contenha a palavra. Todos escolhem ao mesmo tempo, e as escolhas ficam <b>ocultas</b> até o fim do tempo. Enquanto ainda faltar alguém responder e sobrar tempo, você pode <b>alterar</b> a sua música.": "<b>Pick a song.</b> You have <b>{secs} seconds</b> to type the <b>band</b> and the <b>song name</b> whose lyrics contain the word. Everyone picks at the same time, and the picks stay <b>hidden</b> until time runs out. While someone still has not answered and there is time left, you can <b>change</b> your song.", "<br>⚡ <b>Modo Battle Royale:</b> cada vez que alguém envia, o tempo restante dos outros diminui <b>{cut}s</b> (nunca abaixo de 3 segundos). Quem demora, perde tempo!": "<br>⚡ <b>Battle Royale mode:</b> every time someone submits, everyone else's remaining time shrinks by <b>{cut}s</b> (never below 3 seconds). Whoever hesitates, loses time!", "<b>Não lembrou de nenhuma?</b> Use o botão <b>Desistir</b>: você fica com 0 pontos no turno. Quando todos já responderam, a espera é pulada.": "<b>Can't think of one?</b> Use the <b>Give up</b> button: you get 0 points this turn. Once everyone has answered, the wait is skipped.", "<b>Revelação e votação.</b> Cada música toca por 20 segundos e mostra o verso com a palavra. Todos votam: <b>👍 Correta</b>, <b>🤷 Não conheço</b> (ou não vote) ou <b>👎 Errada</b>. Você não vota na sua própria música.": "<b>Reveal and voting.</b> Each song plays for 20 seconds and shows the line with the word. Everyone votes: <b>👍 Correct</b>, <b>🤷 Don't know it</b> (or don't vote) or <b>👎 Wrong</b>. You don't vote on your own song.", "<b>Pontos.</b> Música única aceita: <b>10 pontos</b>. Se duas pessoas escolherem a mesma, <b>5 cada</b>; três ou mais, <b>2 cada</b>. Cada 👍 recebido soma <b>+2</b>. Música recusada ou sem envio: <b>0</b>.": "<b>Points.</b> Accepted unique song: <b>10 points</b>. If two people pick the same one, <b>5 each</b>; three or more, <b>2 each</b>. Each 👍 received adds <b>+2</b>. Rejected song or no submission: <b>0</b>.", "<b>Vitória.</b> Quem tiver mais pontos depois do último turno vence. A sala continua aberta para jogar de novo.": "<b>Victory.</b> Whoever has the most points after the last turn wins. The room stays open to play again.", "Dicas: depois de cada turno, avalie a palavra com 👍 ou 👎. As mais bem avaliadas aparecem com mais frequência. O chat fica pausado enquanto as músicas são escolhidas, para ninguém combinar resposta. Tem uma ideia de palavra? Sugira logo abaixo!": "Tips: after each turn, rate the word with 👍 or 👎. The best-rated ones show up more often. Chat is paused while songs are being chosen, so nobody can agree on answers. Got a word idea? Suggest it right below!"}, "es": {"Jogadores": "Jugadores", "🎵 Palavra da Vez": "🎵 Palabra del Turno", "Palavra da Vez – Online": "Palabra del Turno – Online", "Entre para jogar": "Inicia sesión para jugar", "O login é feito pela sua conta da Twitch. Seu nome e foto de perfil aparecem para os outros jogadores.": "El inicio de sesión se hace con tu cuenta de Twitch. Tu nombre y tu foto de perfil se muestran a los demás jugadores.", "⚠ Você abriu o arquivo direto do disco (file://). O login da Twitch só funciona por um endereço http — veja as instruções.": "⚠ Abriste el archivo directamente desde el disco (file://). El inicio de sesión con Twitch solo funciona desde una dirección http — mira las instrucciones.", "Entrar com a Twitch": "Iniciar sesión con Twitch", "Criar sala": "Crear sala", "Você define as regras e controla o ritmo da partida.": "Tú defines las reglas y controlas el ritmo de la partida.", "Dificuldade das palavras": "Dificultad de las palabras", "Fácil — palavras muito comuns": "Fácil — palabras muy comunes", "Médio — comuns, mas menos óbvias": "Medio — comunes, pero menos obvias", "Difícil — palavras raras em letras": "Difícil — palabras raras en letras", "Tempo para escolher a música": "Tiempo para elegir la canción", "10 segundos": "10 segundos", "15 segundos": "15 segundos", "20 segundos": "20 segundos", "30 segundos": "30 segundos", "45 segundos": "45 segundos", "60 segundos": "60 segundos", "Número de turnos": "Número de turnos", "3 turnos (partida rápida)": "3 turnos (partida rápida)", "5 turnos": "5 turnos", "8 turnos": "8 turnos", "10 turnos": "10 turnos", "15 turnos": "15 turnos", "20 turnos (partida longa)": "20 turnos (partida larga)", "⚡ Modo Battle Royale": "⚡ Modo Battle Royale", "Cada vez que alguém envia a música, o tempo restante dos outros diminui.": "Cada vez que alguien envía la canción, el tiempo restante de los demás disminuye.", "Entrar numa sala": "Entrar en una sala", "Digite o código de 4 letras que o admin passou.": "Escribe el código de 4 letras que compartió el admin.", "Entrar": "Entrar", "💡 Sugerir uma palavra para o sorteio": "💡 Sugerir una palabra para el sorteo", "🛡️ Moderar sugestões": "🛡️ Moderar sugerencias", "Código da sala": "Código de la sala", "Jogadores na sala:": "Jugadores en la sala:", "💡 Como jogar": "💡 Cómo jugar", "▶ Iniciar partida": "▶ Iniciar partida", "Aguardando o admin iniciar…": "Esperando a que el admin inicie…", "Gostou desta palavra?": "¿Te gustó esta palabra?", "Próximo turno agora": "Siguiente turno ahora", "Histórico de palavras": "Historial de palabras", "Sair da sala": "Salir de la sala", "Enviar": "Enviar", "Ligar/desligar o som": "Activar/desactivar el sonido", "Ligar ou desligar o som": "Activar o desactivar el sonido", "Escreva uma mensagem…": "Escribe un mensaje…", "Sala não encontrada.": "Sala no encontrada.", "Essa partida já começou.": "Esa partida ya empezó.", "Sala cheia (máx. 12).": "Sala llena (máx. 12).", "Tempo esgotado.": "Se acabó el tiempo.", "Não é hora de enviar.": "No es momento de enviar.", "Você não vota na sua música.": "No puedes votar tu propia canción.", "Essa palavra já foi sugerida.": "Esa palabra ya fue sugerida.", "Use uma palavra só, só com letras (2 a 24).": "Usa una sola palabra, solo con letras (2 a 24).", "Você já tem 5 sugestões aguardando aprovação.": "Ya tienes 5 sugerencias esperando aprobación.", "Só o moderador pode fazer isso.": "Solo el moderador puede hacer eso.", "Sugestão não encontrada ou já avaliada.": "Sugerencia no encontrada o ya revisada.", "A partida já começou.": "La partida ya empezó.", "Escolha de 1 a 20 turnos.": "Elige de 1 a 20 turnos.", "O chat fica pausado enquanto as músicas são escolhidas.": "El chat está en pausa mientras se eligen las canciones.", "Devagar! Aguarde alguns segundos.": "¡Más despacio! Espera unos segundos.", "Mensagem inválida.": "Mensaje inválido.", "Só dá para avaliar palavras que você já jogou.": "Solo puedes valorar palabras que ya jugaste.", "Você já respondeu neste turno.": "Ya respondiste en este turno.", "Todos já responderam — não dá mais para alterar.": "Todos ya respondieron — ya no se puede cambiar.", "tempo esgotado": "tiempo agotado", "falha de conexão": "falló la conexión", "sem conexão com os catálogos": "sin conexión con los catálogos", "Sair": "Salir", "Fácil": "Fácil", "Médio": "Medio", "Difícil": "Difícil", "Sugira uma palavra para o sorteio. Depois de aprovada pela moderação, ela entra na lista e pode aparecer nas partidas.": "Sugiere una palabra para el sorteo. Una vez aprobada por la moderación, entra en la lista y puede aparecer en las partidas.", "Palavra (português)": "Palabra (portugués)", "ex.: pipoca": "ej.: pipoca", "ex.: popcorn": "ej.: popcorn", "ex.: palomitas": "ej.: palomitas", "Em inglês": "En inglés", "Em espanhol": "En español", "(opcional)": "(opcional)", "Nível sugerido": "Nivel sugerido", "Uma palavra só, sem espaços (2 a 24 letras). Com as traduções, a palavra também vale em inglês e espanhol.": "Una sola palabra, sin espacios (2 a 24 letras). Con las traducciones, la palabra también vale en inglés y español.", "Enviar sugestão": "Enviar sugerencia", "As traduções também precisam ser uma palavra só, só com letras.": "Las traducciones también deben ser una sola palabra, solo letras.", "Essa palavra já existe no jogo.": "Esa palabra ya existe en el juego.", "Sugestão enviada! Ela entra no sorteio depois de aprovada.": "¡Sugerencia enviada! Entra en el sorteo cuando sea aprobada.", "⏳ aguardando aprovação": "⏳ esperando aprobación", "✅ aprovada": "✅ aprobada", "❌ recusada": "❌ rechazada", "Suas sugestões:": "Tus sugerencias:", "({n} pendente)": "({n} pendiente)", "({n} pendentes)": "({n} pendientes)", "sem traduções": "sin traducciones", "— por {a}": "— por {a}", "✅ Aprovar": "✅ Aprobar", "❌ Recusar": "❌ Rechazar", "Nenhuma sugestão pendente.": "No hay sugerencias pendientes.", "Palavra aprovada!": "¡Palabra aprobada!", "Sugestão recusada.": "Sugerencia rechazada.", "Você está na sala <b>{code}</b>. <button id=\"back\">Voltar para a sala</button>": "Estás en la sala <b>{code}</b>. <button id=\"back\">Volver a la sala</button>", "Digite o código de 4 letras.": "Escribe el código de 4 letras.", "({n} nova)": "({n} nueva)", "({n} novas)": "({n} nuevas)", "(todos: 👍 {up} · 👎 {down})": "(todos: 👍 {up} · 👎 {down})", "Sair da sala definitivamente?": "¿Salir de la sala definitivamente?", "Chat pausado durante a escolha das músicas": "Chat en pausa mientras se eligen las canciones", "Sala {code} · {level} · {turns} turnos · {secs}s para escolher a música": "Sala {code} · {level} · {turns} turnos · {secs}s para elegir la canción", "Vale em PT · EN · ES: ": "Vale en PT · EN · ES: ", "Turno {turn}/{total} · {level} · palavra da vez": "Turno {turn}/{total} · {level} · palabra del turno", "Você": "Tú", "Banda / artista": "Banda / artista", "Música": "Canción", "Desistir": "Rendirse", "✏️ Alterar música": "✏️ Cambiar canción", "Cancelar": "Cancelar", "editando…": "editando…", "Sua música atual (<b>{track}</b> — {artist}) continua valendo até você enviar a nova.": "Tu canción actual (<b>{track}</b> — {artist}) sigue valiendo hasta que envíes la nueva.", "✔ enviada": "✔ enviada", "desistiu": "te rendiste", "Sua escolha: <b>{track}</b> — {artist}": "Tu elección: <b>{track}</b> — {artist}", "Você desistiu deste turno (0 pontos).": "Te rendiste en este turno (0 puntos).", "Envios: ": "Envíos: ", "Desistir deste turno? Você fica com 0 pontos nele.": "¿Rendirte en este turno? Te quedas con 0 puntos en él.", "Preencha banda e música": "Rellena banda y canción", "Procurando…": "Buscando…", "Não achei — confira banda e música": "No lo encontré — revisa banda y canción", "Erro: ": "Error: ", "Música alterada!": "¡Canción cambiada!", "▶ Tocar 20s": "▶ Reproducir 20 s", "Ninguém enviou música neste turno.": "Nadie envió canción en este turno.", "Não enviaram (0 pts): <b>{names}</b>": "No enviaron (0 pts): <b>{names}</b>", "<b>Pontos do turno:</b> {list}": "<b>Puntos del turno:</b> {list}", "Escolhida por: <b>{names}</b> ": "Elegida por: <b>{names}</b> ", "⚠ música repetida — pontuação reduzida": "⚠ canción repetida — puntuación reducida", "Conferindo a letra…": "Comprobando la letra…", "⚠ Letra não encontrada (sem checagem automática)": "⚠ Letra no encontrada (sin comprobación automática)", "✔ A letra contém “{h}”": "✔ La letra contiene “{h}”", "✘ A letra NÃO contém: {forms}": "✘ La letra NO contiene: {forms}", "👍 Correta": "👍 Correcta", "🤷 Não conheço": "🤷 No la conozco", "👎 Errada": "👎 Incorrecta", "Esta é a sua música — os outros avaliam.": "Esta es tu canción — los demás votan.", "✔ Aceita (base {base} + {bonus} de bônus)": "✔ Aceptada (base {base} + {bonus} de bonificación)", "✘ Recusada — 0 pts": "✘ Rechazada — 0 pts", "🏆 Ranking final": "🏆 Clasificación final", "Jogar de novo com os mesmos jogadores": "Jugar de nuevo con los mismos jugadores", "Dificuldade": "Dificultad", "▶ Jogar novamente": "▶ Jugar de nuevo", "A sala <b>{code}</b> continua aberta. Aguardando o admin começar uma nova partida…": "La sala <b>{code}</b> sigue abierta. Esperando a que el admin empiece una nueva partida…", "Nenhum turno ainda.": "Aún no hay turnos.", "Sorteadas: <b>{list}</b>": "Sorteadas: <b>{list}</b>", "<b>Turno {t} · {w}</b>": "<b>Turno {t} · {w}</b>", "recusada": "rechazada", "Ninguém enviou": "Nadie envió", "Turno {turn}/{total} — prepare-se!": "Turno {turn}/{total} — ¡prepárate!", "VAI!": "¡YA!", "Todos responderam — revelando…": "Todos respondieron — revelando…", "Aguardando envios…": "Esperando envíos…", "Ouvindo {i}/{n} · votação encerra em {s}s": "Escuchando {i}/{n} · la votación termina en {s}s", "Votação encerra em {s}s": "La votación termina en {s}s", "Próximo turno em {s}s": "Siguiente turno en {s}s", "{x} segundos": "{x} segundos", "<b>A palavra da vez.</b> A cada turno sai uma palavra (por exemplo, <i>chuva</i>). Ela vale em <b>português, inglês e espanhol</b>: <i>chuva</i>, <i>rain</i> e <i>lluvia</i>. A partida tem <b>{turns} turnos</b>, no nível <b>{level}</b>.": "<b>La palabra del turno.</b> En cada turno sale una palabra (por ejemplo, <i>lluvia</i>). Vale en <b>portugués, inglés y español</b>: <i>chuva</i>, <i>rain</i> y <i>lluvia</i>. La partida tiene <b>{turns} turnos</b>, en el nivel <b>{level}</b>.", "<b>Escolha uma música.</b> Você tem <b>{secs} segundos</b> para digitar a <b>banda</b> e o <b>nome da música</b> cuja letra contenha a palavra. Todos escolhem ao mesmo tempo, e as escolhas ficam <b>ocultas</b> até o fim do tempo. Enquanto ainda faltar alguém responder e sobrar tempo, você pode <b>alterar</b> a sua música.": "<b>Elige una canción.</b> Tienes <b>{secs} segundos</b> para escribir la <b>banda</b> y el <b>nombre de la canción</b> cuya letra contenga la palabra. Todos eligen a la vez y las elecciones quedan <b>ocultas</b> hasta que se acabe el tiempo. Mientras falte alguien por responder y sobre tiempo, puedes <b>cambiar</b> tu canción.", "<br>⚡ <b>Modo Battle Royale:</b> cada vez que alguém envia, o tempo restante dos outros diminui <b>{cut}s</b> (nunca abaixo de 3 segundos). Quem demora, perde tempo!": "<br>⚡ <b>Modo Battle Royale:</b> cada vez que alguien envía, el tiempo restante de los demás disminuye <b>{cut}s</b> (nunca por debajo de 3 segundos). ¡Quien tarda, pierde tiempo!", "<b>Não lembrou de nenhuma?</b> Use o botão <b>Desistir</b>: você fica com 0 pontos no turno. Quando todos já responderam, a espera é pulada.": "<b>¿No recordaste ninguna?</b> Usa el botón <b>Rendirse</b>: te quedas con 0 puntos en el turno. Cuando todos ya respondieron, se salta la espera.", "<b>Revelação e votação.</b> Cada música toca por 20 segundos e mostra o verso com a palavra. Todos votam: <b>👍 Correta</b>, <b>🤷 Não conheço</b> (ou não vote) ou <b>👎 Errada</b>. Você não vota na sua própria música.": "<b>Revelación y votación.</b> Cada canción suena 20 segundos y muestra el verso con la palabra. Todos votan: <b>👍 Correcta</b>, <b>🤷 No la conozco</b> (o no votes) o <b>👎 Incorrecta</b>. No votas tu propia canción.", "<b>Pontos.</b> Música única aceita: <b>10 pontos</b>. Se duas pessoas escolherem a mesma, <b>5 cada</b>; três ou mais, <b>2 cada</b>. Cada 👍 recebido soma <b>+2</b>. Música recusada ou sem envio: <b>0</b>.": "<b>Puntos.</b> Canción única aceptada: <b>10 puntos</b>. Si dos personas eligen la misma, <b>5 cada una</b>; tres o más, <b>2 cada una</b>. Cada 👍 recibido suma <b>+2</b>. Canción rechazada o sin envío: <b>0</b>.", "<b>Vitória.</b> Quem tiver mais pontos depois do último turno vence. A sala continua aberta para jogar de novo.": "<b>Victoria.</b> Gana quien tenga más puntos tras el último turno. La sala sigue abierta para jugar de nuevo.", "Dicas: depois de cada turno, avalie a palavra com 👍 ou 👎. As mais bem avaliadas aparecem com mais frequência. O chat fica pausado enquanto as músicas são escolhidas, para ninguém combinar resposta. Tem uma ideia de palavra? Sugira logo abaixo!": "Consejos: después de cada turno, valora la palabra con 👍 o 👎. Las mejor valoradas salen con más frecuencia. El chat se pausa mientras se eligen las canciones, para que nadie se ponga de acuerdo. ¿Tienes una idea de palabra? ¡Sugiérela justo abajo!"}};
+// tr("texto em português", {variaveis}) -> texto no idioma atual (se faltar a tradução, usa o português)
+function tr(pt,v){
+  let x=(LANG!=='pt'&&I18N[LANG]&&I18N[LANG][pt])||pt;
+  if(v)x=x.replace(/\{(\w+)\}/g,(m,k)=>k in v?v[k]:m);
+  return x;
+}
+// traduz os textos fixos da página (HTML estático): guarda o original em português em cada nó
+const PT_KEYS=new Set(Object.keys(I18N.en));
+function applyStatic(){
+  const d=LANG==='pt'?null:I18N[LANG],w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),ns=[];
+  while(w.nextNode())ns.push(w.currentNode);
+  ns.forEach(n=>{
+    if(n._pt===undefined){
+      const v=n.nodeValue.trim();if(!v||!PT_KEYS.has(v)||/^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName))return;
+      n._pt=v;n._lead=n.nodeValue.match(/^\s*/)[0];n._trail=n.nodeValue.match(/\s*$/)[0];
+    }
+    n.nodeValue=n._lead+((d&&d[n._pt])||n._pt)+n._trail;
+  });
+  document.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el=>['placeholder','title','aria-label'].forEach(a=>{
+    if(!el.hasAttribute(a))return;const k='_pt_'+a;
+    if(el[k]===undefined){const v=el.getAttribute(a);if(!PT_KEYS.has(v))return;el[k]=v}
+    el.setAttribute(a,(d&&d[el[k]])||el[k]);
+  }));
+  document.documentElement.lang=LOC[LANG];document.title=tr('Palavra da Vez – Online');
+}
+const ERR={room_not_found:'Sala não encontrada.',game_started:'Essa partida já começou.',room_full:'Sala cheia (máx. 12).',time_over:'Tempo esgotado.',not_input_phase:'Não é hora de enviar.',own_song:'Você não vota na sua música.',word_exists:'Essa palavra já foi sugerida.',bad_word:'Use uma palavra só, só com letras (2 a 24).',too_many_pending:'Você já tem 5 sugestões aguardando aprovação.',not_admin:'Só o moderador pode fazer isso.',not_found:'Sugestão não encontrada ou já avaliada.',already_started:'A partida já começou.',bad_turns:'Escolha de 1 a 20 turnos.',chat_paused:'O chat fica pausado enquanto as músicas são escolhidas.',slow_down:'Devagar! Aguarde alguns segundos.',bad_message:'Mensagem inválida.',word_not_played:'Só dá para avaliar palavras que você já jogou.',already_ready:'Você já respondeu neste turno.',cannot_change:'Todos já responderam — não dá mais para alterar.'};
+const errMsg=e=>{const k=(e.message||'').trim();return ERR[k]?tr(ERR[k]):e.message};
+
+/* ---------- letra / música ---------- */
+let word='';
+const wf=()=>WORDS[word]||[word];
+// só letras/números/espaço entram na expressão regular (palavras sugeridas por jogadores)
+const forms=()=>[...new Set(wf().map(norm))].filter(f=>f&&/^[a-z0-9 ]+$/.test(f));
+const rx=()=>new RegExp('(^|[^a-z0-9])(?:'+forms().join('|')+')(?:s|es)?(?![a-z0-9])');
+function findLine(lyr){const r=rx();return lyr.split('\n').map(l=>l.replace(/^\[[^\]]*\]\s*/,'').trim()).find(l=>r.test(norm(l)))}
+function hitOf(t){const m=norm(t).match(rx());return m?t.slice(m.index+m[1].length,m.index+m[0].length):''}
+function hl(t){const m=norm(t).match(rx());if(!m)return esc(t);const i=m.index+m[1].length,L=m[0].length-m[1].length;return esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+L))+'</mark>'+esc(t.slice(i+L))}
+function jsonp(url){return new Promise((res,rej)=>{
+  const cb='cb'+Math.random().toString(36).slice(2),s=document.createElement('script');
+  const to=setTimeout(()=>{rej(new Error(tr('tempo esgotado')));s.remove()},10000);
+  window[cb]=d=>{clearTimeout(to);res(d);s.remove();delete window[cb]};
+  s.onerror=()=>{clearTimeout(to);rej(new Error(tr('falha de conexão')));s.remove()};
+  s.src=url+'&callback='+cb;document.head.appendChild(s)})}
+const flat=s=>norm(s).replace(/[^a-z0-9]+/g,' ').trim();   // sem acento, sem maiúsculas, sem pontuação
+/*FUZZY-START*/
+// distância de edição (letras trocadas, faltando ou sobrando)
+function lev(a,b){
+  const m=a.length,n=b.length;if(!m)return n;if(!n)return m;
+  let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}
+  return prev[n];
+}
+// erros tolerados conforme o tamanho do texto digitado (curtos exigem exatidão)
+const allow=n=>n<=3?0:n<=7?1:n<=14?2:3;
+// distância entre o que foi digitado (q) e o texto do catálogo (t): 0 se um contém o outro
+function dist(t,q){
+  if(!q)return 0;if(!t)return 99;
+  if(t.includes(q)||(q.includes(t)&&t.length>=Math.max(3,q.length*.5)))return 0;
+  let best=lev(q,t);const L=q.length;
+  for(const w of [L-1,L,L+1]){if(w<1||w>t.length)continue;for(let i=0;i+w<=t.length;i++){const d=lev(q,t.substr(i,w));if(d<best)best=d}}
+  return best;
+}
+// custo de uma faixa do catálogo para o que foi digitado; null = diferente demais
+function cost(nt,na,x){
+  const full=flat(x.trackName),cl=flat(clean(x.trackName)),a=flat(x.artistName);
+  const dt=Math.min(dist(full,nt),dist(cl,nt)),da=dist(a,na);
+  if(dt>allow(nt.length)||da>allow(na.length))return null;
+  return{dt,da,exact:(full===nt||cl===nt)?1:0};
+}
+/*FUZZY-END*/
+async function findSong(artist,track){
+  const nt=flat(track),na=flat(artist);if(!nt||!na)return null;
+  const it=x=>({trackName:x.trackName,artistName:x.artistName,art:(x.artworkUrl100||'').replace('100x100','300x300'),previewUrl:x.previewUrl});
+  const dz=x=>({trackName:x.title,artistName:x.artist&&x.artist.name,art:x.album&&x.album.cover_big,previewUrl:x.preview});
+  const I=t=>jsonp('https://itunes.apple.com/search?entity=song&limit=50&country=BR&term='+encodeURIComponent(t)).then(d=>d.results.map(it));
+  const D=t=>jsonp('https://api.deezer.com/search?limit=40&output=jsonp&q='+encodeURIComponent(t)).then(d=>d.data.map(dz));
+  // várias buscas ao mesmo tempo: texto original, sem acento/maiúsculas, só música, só banda
+  const res=await Promise.allSettled([I(artist+' '+track),I(na+' '+nt),I(track),I(artist),D(artist+' '+track),D(artist)]);
+  if(res.every(r=>r.status==='rejected'))throw new Error(tr('sem conexão com os catálogos'));
+  const seen=new Set(),cands=[];
+  res.forEach((r,si)=>{if(r.status!=='fulfilled')return;
+    r.value.forEach((x,i)=>{
+      if(!x.previewUrl||!x.trackName||!x.artistName)return;
+      const k=norm(clean(x.trackName))+'|'+norm(x.artistName);if(seen.has(k))return;seen.add(k);
+      const c=cost(nt,na,x);if(c)cands.push({x,c,o:si*100+i});
+    });
+  });
+  if(!cands.length)return null;
+  // mais próximo primeiro: menos erros, depois título exato, depois ordem do catálogo
+  cands.sort((a,b)=>(a.c.dt+a.c.da)-(b.c.dt+b.c.da)||b.c.exact-a.c.exact||a.o-b.o);
+  const x=cands[0].x;
+  return{key:norm(clean(x.trackName))+'|'+norm(x.artistName),track:x.trackName,artist:x.artistName,art:x.art,preview:x.previewUrl};
+}
+async function getLyrics(artist,track){
+  try{
+    const p=`artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(clean(track))}`;
+    let r=await fetch('https://lrclib.net/api/get?'+p);
+    if(r.ok){const j=await r.json();if(j.plainLyrics)return j.plainLyrics}
+    r=await fetch('https://lrclib.net/api/search?'+p);
+    if(r.ok){const j=await r.json();const h=j.find(x=>x.plainLyrics);if(h)return h.plainLyrics}
+  }catch(e){}
+  return null;
+}
+
+/* ---------- som ---------- */
+let ac=null;
+function beep(f,d){const v=curVol();if(v<=0)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();
+  const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.type='sine';o.frequency.value=f;
+  g.gain.setValueAtTime(Math.max(.001,.3*v),t);g.gain.exponentialRampToValueAtTime(.0005,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d)}catch(e){}}
+let audio=null;
+let vol=.7,muted=false;
+try{const v=localStorage.getItem('pdv_vol');if(v!==null)vol=Math.min(1,Math.max(0,+v)||0);muted=localStorage.getItem('pdv_mute')==='1'}catch(e){}
+const curVol=()=>muted?0:vol;
+function applyVol(){
+  $('volr').value=Math.round(vol*100);
+  const c=curVol();$('mute').textContent=c===0?'🔇':c<.4?'🔈':c<.75?'🔉':'🔊';
+  if(audio)audio.volume=c;
+  try{localStorage.setItem('pdv_vol',String(vol));localStorage.setItem('pdv_mute',muted?'1':'0')}catch(e){}
+}
+$('volr').oninput=e=>{vol=e.target.value/100;if(vol>0)muted=false;applyVol()};
+$('volr').onchange=()=>beep(660,.15);   // som de teste ao soltar o controle
+$('mute').onclick=()=>{muted=!muted;if(!muted&&vol===0)vol=.5;applyVol();if(!muted)beep(660,.15)};
+function stopAudio(){setSpot([]);if(audio){audio.pause();audio=null}document.querySelectorAll('.card .bar i').forEach(b=>b.style.width='0');document.querySelectorAll('.card').forEach(c=>c.classList.remove('now'))}
+
+/* ---------- login ---------- */
+let user=null,me={name:'Jogador',avatar:null};
+function show(v){
+  ['login','home','room'].forEach(x=>$('v-'+x).hidden=x!==v);
+  $('shell').classList.toggle('room',v==='room');$('colL').hidden=$('colR').hidden=v!=='room';
+}
+function renderMe(){
+  if(!user)return;
+  $('me').innerHTML=(me.avatar?`<img src="${esc(me.avatar)}" alt="">`:'')+`<b>${esc(me.name)}</b> <button class="ghost" id="logout">${tr('Sair')}</button>`;
+  $('logout').onclick=async()=>{leaveRoom(true);await sb.auth.signOut()};
+}
+function setUser(u){
+  user=u;
+  $('admPanel').hidden=true;$('admList').innerHTML='';$('admCount').textContent='';
+  if(!u){$('me').innerHTML='';show('login');$('fileWarn').hidden=location.protocol!=='file:';return}
+  const m=u.user_metadata||{};
+  me={name:m.preferred_username||m.user_name||m.name||m.full_name||'Jogador',avatar:m.avatar_url||m.picture||null};
+  renderMe();
+  if(!ROOM_ID)show('home');
+  loadCustomWords();
+  checkActive();
+}
+$('tw').onclick=()=>sb.auth.signInWithOAuth({provider:'twitch',options:{redirectTo:location.origin+location.pathname}});
+/* ---------- palavras sugeridas pelos jogadores ---------- */
+const customKeys=new Set();
+async function loadCustomWords(){
+  try{
+    const {data}=await sb.rpc('pdv_custom_words');
+    (data||[]).forEach(r=>{
+      if(WORDS[r.word]&&!customKeys.has(r.word))return;          // palavra do jogo tem prioridade
+      const f=[r.word,r.en,r.es].filter(Boolean);
+      customKeys.add(r.word);LEVELS[r.level].w[r.word]=f;WORDS[r.word]=f;
+    });
+  }catch(e){}
+}
+const WORD_RX=/^[a-zA-ZÀ-ÖØ-öø-ÿ]{2,24}$/;
+const isKnownWord=w=>{const n=norm(w);return Object.values(WORDS).some(f=>f.some(x=>norm(x)===n))};
+function sugFormHTML(){return `<div class="a" style="margin:6px 0">${tr("Sugira uma palavra para o sorteio. Depois de aprovada pela moderação, ela entra na lista e pode aparecer nas partidas.")}</div>
+  <div class="fld"><b>${tr('Palavra (português)')}</b><input class="sg-w" maxlength="24" placeholder="${tr('ex.: pipoca')}" autocomplete="off"></div>
+  <div class="fld"><b>${tr('Em inglês')}</b> <span class="a">${tr('(opcional)')}</span><input class="sg-en" maxlength="24" placeholder="${tr('ex.: popcorn')}" autocomplete="off"></div>
+  <div class="fld"><b>${tr('Em espanhol')}</b> <span class="a">${tr('(opcional)')}</span><input class="sg-es" maxlength="24" placeholder="${tr('ex.: palomitas')}" autocomplete="off"></div>
+  <div class="fld"><b>${tr('Nível sugerido')}</b><select class="sg-lv"><option value="facil">${tr('Fácil')}</option><option value="medio">${tr('Médio')}</option><option value="dificil">${tr('Difícil')}</option></select></div>
+  <div class="a" style="margin-top:6px">${tr("Uma palavra só, sem espaços (2 a 24 letras). Com as traduções, a palavra também vale em inglês e espanhol.")}</div>
+  <div class="ctl"><button class="sg-send">${tr('Enviar sugestão')}</button></div>
+  <div class="sg-list" style="margin-top:12px"></div>`}
+function mountSuggest(el){
+  el.innerHTML=sugFormHTML();
+  el.querySelector('.sg-send').onclick=()=>sendSuggest(el);
+  el.querySelectorAll('input').forEach(i=>i.onkeydown=e=>{if(e.key==='Enter')sendSuggest(el)});
+}
+async function sendSuggest(el){
+  const w=el.querySelector('.sg-w').value.trim(),en=el.querySelector('.sg-en').value.trim(),es=el.querySelector('.sg-es').value.trim(),lv=el.querySelector('.sg-lv').value;
+  if(!WORD_RX.test(w))return toast(tr('Use uma palavra só, só com letras (2 a 24).'));
+  if((en&&!WORD_RX.test(en))||(es&&!WORD_RX.test(es)))return toast(tr('As traduções também precisam ser uma palavra só, só com letras.'));
+  if(isKnownWord(w))return toast(tr('Essa palavra já existe no jogo.'));
+  const {error}=await sb.rpc('pdv_suggest_word',{p_word:w,p_en:en,p_es:es,p_level:lv});
+  if(error)return toast(errMsg(error));
+  el.querySelectorAll('input').forEach(i=>i.value='');
+  toast(tr('Sugestão enviada! Ela entra no sorteio depois de aprovada.'));
+  refreshSuggestLists();
+}
+const SG_ST=st=>({pending:tr('⏳ aguardando aprovação'),approved:tr('✅ aprovada'),rejected:tr('❌ recusada')}[st]);
+async function refreshSuggestLists(){
+  if(!user)return;
+  const {data}=await sb.from('pdv_word_suggestions').select('word,status').eq('user_id',user.id).order('id',{ascending:false}).limit(10);
+  const html=data&&data.length?'<div class="a" style="margin-bottom:4px">'+tr('Suas sugestões:')+'</div>'+data.map(x=>`<div class="sg-st"><b>${esc(x.word)}</b> — ${SG_ST(x.status)||esc(x.status)}</div>`).join(''):'';
+  document.querySelectorAll('.sg-list').forEach(e=>e.innerHTML=html);
+  // painel do moderador
+  const who=user.id;
+  const adm=await sb.rpc('pdv_is_admin');
+  if(!user||user.id!==who)return;                // a conta mudou durante a consulta
+  const panel=$('admPanel');panel.hidden=!(adm.data===true&&!adm.error);
+  if(!panel.hidden)loadPending();
+}
+async function loadPending(){
+  const {data,error}=await sb.rpc('pdv_pending_suggestions');
+  if(error||!data)return;
+  $('admCount').textContent=data.length?tr(data.length>1?'({n} pendentes)':'({n} pendente)',{n:data.length}):'';
+  const lvOpt=(v,sel)=>`<option value="${v}" ${sel===v?'selected':''}>${tr(LEVELS[v].label)}</option>`;
+  $('admList').innerHTML=data.length?data.map(x=>`<div class="sg-item" data-id="${x.id}">
+    <span><b>${esc(x.word)}</b> <span class="a">${[x.en,x.es].filter(Boolean).map(esc).join(' · ')||tr('sem traduções')} ${tr('— por {a}',{a:esc(x.author)})}</span></span>
+    <select class="adm-lv">${lvOpt('facil',x.level)}${lvOpt('medio',x.level)}${lvOpt('dificil',x.level)}</select>
+    <button data-act="ok">${tr('✅ Aprovar')}</button><button class="ghost" data-act="no">${tr('❌ Recusar')}</button></div>`).join(''):'<div class="a">'+tr('Nenhuma sugestão pendente.')+'</div>';
+}
+$('admList').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-act]');if(!b)return;
+  const it=b.closest('.sg-item'),id=+it.dataset.id,ok=b.dataset.act==='ok';
+  const {error}=await sb.rpc('pdv_review_suggestion',{p_id:id,p_approve:ok,p_level:it.querySelector('.adm-lv').value});
+  if(error)return toast(errMsg(error));
+  toast(ok?tr('Palavra aprovada!'):tr('Sugestão recusada.'));
+  await loadCustomWords();loadPending();refreshSuggestLists();
+});
+mountSuggest($('sugHome'));mountSuggest($('sugLobby'));
+async function checkActive(){
+  refreshSuggestLists();
+  const {data}=await sb.from('pdv_players').select('room_id,pdv_rooms(code,status,created_at)').eq('user_id',user.id);
+  const act=(data||[]).filter(x=>x.pdv_rooms).sort((a,b)=>b.pdv_rooms.created_at.localeCompare(a.pdv_rooms.created_at));
+  const box=$('resume');
+  if(!act.length){box.hidden=true;return}
+  box.hidden=false;box.innerHTML=tr("Você está na sala <b>{code}</b>. <button id=\"back\">Voltar para a sala</button>",{code:esc(act[0].pdv_rooms.code)});
+  $('back').onclick=()=>enterRoom(act[0].room_id);
+}
+
+/* ---------- salas ---------- */
+let ROOM_ID=null,chan=null,poll=null,loadT=null,S={},lastKey='',phaseT0=0,builtIn='',songsSig='',lastCdN=null,called=new Set(),lyr={};
+$('create').onclick=async()=>{beep(440,.08);
+  const {data,error}=await sb.rpc('pdv_create_room',{p_level:$('lvl').value,p_secs:+$('secs').value,p_name:me.name,p_avatar:me.avatar,p_turns:+$('turns').value,p_battle:$('battle').checked});
+  if(error)return toast(errMsg(error));enterRoom(data.id)};
+$('join').onclick=async()=>{beep(440,.08);
+  const c=$('code').value.trim();if(c.length<4)return toast(tr('Digite o código de 4 letras.'));
+  const {data,error}=await sb.rpc('pdv_join_room',{p_code:c,p_name:me.name,p_avatar:me.avatar});
+  if(error)return toast(errMsg(error));enterRoom(data.id)};
+let chatLast=0,chatUnread=0;
+function chatReset(){chatLast=0;chatUnread=0;$('chatlog').innerHTML='';$('chatbadge').textContent=''}
+async function fetchChat(){
+  const id=ROOM_ID;if(!id)return;
+  const {data,error}=await sb.from('pdv_chat').select('*').eq('room_id',id).gt('id',chatLast).order('id').limit(100);
+  if(id!==ROOM_ID||error||!data||!data.length)return;
+  const log=$('chatlog'),atBottom=log.scrollTop+log.clientHeight>=log.scrollHeight-40;
+  let mineNew=false;
+  data.forEach(m=>{
+    if(m.id<=chatLast)return;chatLast=m.id;
+    const d=document.createElement('div');d.className='msg'+(m.user_id===user.id?' me':'');
+    const t=new Date(m.created_at).toLocaleTimeString(LOC[LANG],{hour:'2-digit',minute:'2-digit'});
+    d.innerHTML=`<b>${esc(m.author)}</b> <span class="a">${t}</span><div>${esc(m.body)}</div>`;
+    log.appendChild(d);
+    if(m.user_id===user.id)mineNew=true;else if(!$('chatbox').open)chatUnread++;
+  });
+  while(log.children.length>200)log.removeChild(log.firstChild);
+  if(atBottom||mineNew)log.scrollTop=log.scrollHeight;
+  $('chatbadge').textContent=chatUnread?tr(chatUnread>1?'({n} novas)':'({n} nova)',{n:chatUnread}):'';
+}
+async function sendChat(){
+  const el=$('chatin'),txt=el.value.trim();if(!txt||!ROOM_ID||el.disabled)return;
+  const {error}=await sb.rpc('pdv_chat_send',{p_room:ROOM_ID,p_body:txt});
+  if(error)return toast(errMsg(error));
+  el.value='';fetchChat();
+}
+$('chatsend').onclick=sendChat;
+$('chatin').onkeydown=e=>{if(e.key==='Enter')sendChat()};
+$('chatbox').addEventListener('toggle',()=>{if($('chatbox').open){chatUnread=0;$('chatbadge').textContent='';$('chatlog').scrollTop=$('chatlog').scrollHeight}});
+let myWV={},wvScores={};
+async function loadWordRatings(){
+  try{
+    const [a,b]=await Promise.all([sb.from('pdv_word_votes').select('word,value').eq('user_id',user.id),sb.rpc('pdv_word_scores')]);
+    if(a.data){myWV={};a.data.forEach(x=>myWV[x.word]=x.value)}
+    if(b.data){wvScores={};b.data.forEach(x=>wvScores[x.word]=x)}
+  }catch(e){}
+}
+function renderWordRate(){
+  const R=S.room,show=R&&(R.phase==='reveal'||R.phase==='done');
+  $('wrate').hidden=!show;if(!show)return;
+  const v=myWV[word]||0,t=wvScores[word]||{up:0,down:0};
+  $('wup').classList.toggle('on',v===1);$('wdn').classList.toggle('on',v===-1);
+  $('wcnt').textContent=(t.up+t.down)?tr('(todos: 👍 {up} · 👎 {down})',{up:t.up,down:t.down}):'';
+}
+async function rateWord(val){
+  const w=word,nv=(myWV[w]||0)===val?0:val;
+  const {error}=await sb.rpc('pdv_rate_word',{p_word:w,p_value:nv});
+  if(error)return toast(errMsg(error));
+  await loadWordRatings();renderWordRate();
+}
+$('wup').onclick=()=>rateWord(1);$('wdn').onclick=()=>rateWord(-1);
+function enterRoom(id){
+  leaveRoom(true);ROOM_ID=id;S={room:null,players:[],ready:[],subs:[],votes:[],results:[]};
+  lastKey='';builtIn='';songsSig='';lyr={};called=new Set();
+  loadWordRatings();chatReset();loadCustomWords();
+  show('room');
+  chan=sb.channel('pdv-'+id);
+  ['pdv_players','pdv_submissions','pdv_ready','pdv_votes','pdv_results'].forEach(t=>chan.on('postgres_changes',{event:'*',schema:'public',table:t,filter:'room_id=eq.'+id},schedule));
+  chan.on('postgres_changes',{event:'*',schema:'public',table:'pdv_rooms',filter:'id=eq.'+id},schedule);
+  chan.on('postgres_changes',{event:'INSERT',schema:'public',table:'pdv_chat',filter:'room_id=eq.'+id},()=>fetchChat());
+  chan.subscribe();
+  poll=setInterval(()=>{schedule();fetchChat()},4000);loadAll();fetchChat();
+}
+function leaveRoom(silent){
+  if(chan){sb.removeChannel(chan);chan=null}
+  clearInterval(poll);stopAudio();ROOM_ID=null;$('cd').hidden=true;
+  if(!silent){show('home');checkActive()}
+}
+$('leave').onclick=async()=>{if(!confirm(tr('Sair da sala definitivamente?')))return;const id=ROOM_ID;await sb.rpc('pdv_leave_room',{p_room:id});leaveRoom(false)};
+function schedule(){clearTimeout(loadT);loadT=setTimeout(loadAll,120)}
+async function loadAll(){
+  const id=ROOM_ID;if(!id)return;
+  const q=t=>sb.from(t).select('*').eq('room_id',id);
+  const [r,p,rd,sm,vt,rs]=await Promise.all([sb.from('pdv_rooms').select('*').eq('id',id).single(),q('pdv_players'),q('pdv_ready'),q('pdv_submissions'),q('pdv_votes'),q('pdv_results')]);
+  if(id!==ROOM_ID||r.error||!r.data)return;
+  const prevRoom=S.room;
+  S={room:r.data,players:p.data||[],ready:rd.data||[],subs:sm.data||[],votes:vt.data||[],results:rs.data||[]};
+  if(prevRoom&&prevRoom.turn===S.room.turn&&prevRoom.phase==='input'&&S.room.phase==='input'){
+    const cut=Math.round((inputDur(prevRoom)-inputDur(S.room))/1000);
+    if(cut>0){flashText=`⚡ -${cut}s`;flashUntil=Date.now()+2500;beep(280,.18)}
+  }
+  const R=S.room,key=R.turn+':'+R.phase;
+  if(key!==lastKey){
+    const first=lastKey==='';lastKey=key;
+    phaseT0=first?Date.parse(R.phase_started_at||new Date()):Date.now();
+    stopAudio();songsSig='';lastCdN=null;builtIn='';editing=false;
+    if(R.phase==='lobby'){lyr={};called=new Set()}
+    if(R.phase==='reveal')fetchLyrics();
+  }
+  render();
+}
+
+/* ---------- helpers de estado ---------- */
+const isHost=()=>S.room&&user&&S.room.host_id===user.id;
+// duração da fase de escolha em ms, calculada só com horários do servidor (sem depender do relógio local)
+const inputDur=R=>R.deadline_at&&R.phase_started_at?Date.parse(R.deadline_at)-Date.parse(R.phase_started_at):R.input_secs*1000;
+let flashUntil=0,flashText='';
+const pname=uid=>(S.players.find(p=>p.user_id===uid)||{}).display_name||'?';
+const myReady=()=>S.ready.some(x=>x.turn===S.room.turn&&x.user_id===user.id);
+function groups(){
+  const g={};S.subs.filter(s=>s.turn===S.room.turn).forEach(s=>{(g[s.song_key]??={key:s.song_key,s,by:[]}).by.push(s.user_id)});
+  return Object.values(g).sort((a,b)=>a.key<b.key?-1:1);
+}
+async function pickWords(level,n){
+  await loadCustomWords();
+  let prev=[];try{prev=JSON.parse(localStorage.getItem('pdv_last_'+level)||'[]')}catch(e){}
+  let sc={};
+  try{const {data}=await sb.rpc('pdv_word_scores');(data||[]).forEach(x=>sc[x.word]=x)}catch(e){}
+  // peso: 1 sem votos; sobe até ~2 com muitos 👍 e cai até 0,15 com muitos 👎; palavras da partida anterior pesam metade
+  const pool=Object.keys(LEVELS[level].w).map(w=>{
+    const v=sc[w]||{up:0,down:0};
+    let wt=Math.max(.15,1+(v.up-v.down)/(v.up+v.down+4));if(prev.includes(w))wt*=.5;
+    return{w,k:Math.pow(Math.random(),1/wt)};     // amostragem ponderada sem reposição
+  });
+  const words=pool.sort((a,b)=>b.k-a.k).slice(0,n).map(o=>o.w).sort(()=>Math.random()-.5);
+  try{localStorage.setItem('pdv_last_'+level,JSON.stringify(words))}catch(e){}
+  return words;
+}
+$('start').onclick=async()=>{beep(440,.08);
+  const words=await pickWords(S.room.level,S.room.total_turns);
+  const {error}=await sb.rpc('pdv_start_game',{p_room:ROOM_ID,p_words:words});
+  if(error)toast(errMsg(error));else schedule()};
+$('nextnow').onclick=()=>hostCall('nn','pdv_next_turn',{p_room:ROOM_ID});
+
+/* ---------- render ---------- */
+function renderHowTo(R){
+  const sig=[R.input_secs,R.total_turns,R.level,R.battle,LANG].join('|');
+  if($('howbody').dataset.sig===sig)return;$('howbody').dataset.sig=sig;
+  const cut=Math.ceil(R.input_secs*0.25);
+  $('howbody').innerHTML=`<ol>
+    <li>${tr("<b>A palavra da vez.</b> A cada turno sai uma palavra (por exemplo, <i>chuva</i>). Ela vale em <b>português, inglês e espanhol</b>: <i>chuva</i>, <i>rain</i> e <i>lluvia</i>. A partida tem <b>{turns} turnos</b>, no nível <b>{level}</b>.",{turns:R.total_turns,level:esc(tr(LEVELS[R.level].label))})}</li>
+    <li>${tr("<b>Escolha uma música.</b> Você tem <b>{secs} segundos</b> para digitar a <b>banda</b> e o <b>nome da música</b> cuja letra contenha a palavra. Todos escolhem ao mesmo tempo, e as escolhas ficam <b>ocultas</b> até o fim do tempo. Enquanto ainda faltar alguém responder e sobrar tempo, você pode <b>alterar</b> a sua música.",{secs:R.input_secs})}${R.battle?tr("<br>⚡ <b>Modo Battle Royale:</b> cada vez que alguém envia, o tempo restante dos outros diminui <b>{cut}s</b> (nunca abaixo de 3 segundos). Quem demora, perde tempo!",{cut}):''}</li>
+    <li>${tr("<b>Não lembrou de nenhuma?</b> Use o botão <b>Desistir</b>: você fica com 0 pontos no turno. Quando todos já responderam, a espera é pulada.")}</li>
+    <li>${tr("<b>Revelação e votação.</b> Cada música toca por 20 segundos e mostra o verso com a palavra. Todos votam: <b>👍 Correta</b>, <b>🤷 Não conheço</b> (ou não vote) ou <b>👎 Errada</b>. Você não vota na sua própria música.")}</li>
+    <li>${tr("<b>Pontos.</b> Música única aceita: <b>10 pontos</b>. Se duas pessoas escolherem a mesma, <b>5 cada</b>; três ou mais, <b>2 cada</b>. Cada 👍 recebido soma <b>+2</b>. Música recusada ou sem envio: <b>0</b>.")}</li>
+    <li>${tr("<b>Vitória.</b> Quem tiver mais pontos depois do último turno vence. A sala continua aberta para jogar de novo.")}</li>
+  </ol>
+  <div class="tip">${tr("Dicas: depois de cada turno, avalie a palavra com 👍 ou 👎. As mais bem avaliadas aparecem com mais frequência. O chat fica pausado enquanto as músicas são escolhidas, para ninguém combinar resposta. Tem uma ideia de palavra? Sugira logo abaixo!")}</div>`;
+}
+let spotIds=new Set();
+// lista de jogadores (esquerda): você primeiro; o holofote marca quem escolheu a música que está tocando
+function renderPlayersSide(){
+  const R=S.room;if(!R||!user)return;
+  const order=[...S.players].sort((a,b)=>(a.user_id===user.id?-1:b.user_id===user.id?1:0)||String(a.joined_at).localeCompare(String(b.joined_at)));
+  $('plist').innerHTML=order.map(p=>`<div class="pside ${p.user_id===user.id?'me':''} ${spotIds.has(p.user_id)?'spot':''}" data-uid="${p.user_id}">${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="" onerror="this.style.visibility='hidden'">`:`<span class="ini">${esc((p.display_name||'?')[0].toUpperCase())}</span>`}<span class="nm">${esc(p.display_name)}${p.user_id===R.host_id?' 👑':''}</span><span class="sc">${p.score} pts</span></div>`).join('');
+  $('colL').classList.toggle('spotting',spotIds.size>0);
+}
+function setSpot(ids){
+  spotIds=new Set(ids);
+  document.querySelectorAll('#plist .pside').forEach(e=>e.classList.toggle('spot',spotIds.has(e.dataset.uid)));
+  $('colL').classList.toggle('spotting',spotIds.size>0);
+}
+function render(){
+  const R=S.room;if(!R)return;
+  renderPlayersSide();
+  const paused=R.phase==='countdown'||R.phase==='input';
+  $('chatin').disabled=paused;$('chatsend').disabled=paused;
+  $('chatin').placeholder=paused?tr('Chat pausado durante a escolha das músicas'):tr('Escreva uma mensagem…');
+  $('roominfo').textContent=tr('Sala {code} · {level} · {turns} turnos · {secs}s para escolher a música',{code:R.code,level:tr(LEVELS[R.level].label),turns:R.total_turns,secs:R.input_secs})+(R.battle?' · ⚡ Battle Royale':'');
+  const lobby=R.phase==='lobby',fin=R.phase==='finished';
+  $('a-lobby').hidden=!lobby;$('a-play').hidden=lobby||fin;$('a-end').hidden=!fin;
+  if(lobby){
+    $('lobbycode').textContent=R.code;
+    $('lobbyplayers').innerHTML=S.players.map(p=>`<span class="pl">${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="">`:''}${esc(p.display_name)}${p.user_id===R.host_id?' 👑':''}</span>`).join('');
+    $('start').hidden=!isHost();$('waitHost').hidden=isHost();
+    renderHowTo(R);
+  }else{
+    word=R.words[R.turn-1]||'';
+    if(word&&!WORDS[word]){render.unk=(render.unk||0)+1;if(render.unk<=3){loadCustomWords().then(()=>render());return}}
+    $('score').innerHTML=[...S.players].sort((a,b)=>b.score-a.score).map(p=>`<span class="chip">${esc(p.display_name)}: <b>${p.score}</b></span>`).join('');
+    const hide=R.phase==='countdown';
+    $('word').textContent=hide?'• • •':word;
+    $('langs').textContent=hide?'':tr('Vale em PT · EN · ES: ')+forms().join(' · ');
+    $('turnlbl').textContent=tr('Turno {turn}/{total} · {level} · palavra da vez',{turn:R.turn,total:R.total_turns,level:tr(LEVELS[R.level].label)});
+    $('inbox').hidden=R.phase!=='input';$('reveal').hidden=!(R.phase==='reveal'||R.phase==='done');
+    renderWordRate();
+    if(R.phase==='input')renderInput();
+    if(R.phase==='reveal'||R.phase==='done')renderReveal();
+  }
+  if(fin)renderEnd();
+  renderHistory();
+}
+function renderInput(){
+  const R=S.room,k='in'+R.turn;
+  if(builtIn!==k){builtIn=k;
+    $('inbox').innerHTML=`<div class="pr"><label>${tr('Você')}</label><input id="ia" class="ia" placeholder="${tr('Banda / artista')}" autocomplete="off" spellcheck="false"><input id="it" class="it" placeholder="${tr('Música')}" autocomplete="off" spellcheck="false"><button id="isend">${tr('Enviar')}</button><button id="giveup" class="ghost">${tr('Desistir')}</button><button id="chg" class="ghost" hidden>${tr('✏️ Alterar música')}</button><button id="cancelchg" class="ghost" hidden>${tr('Cancelar')}</button><span id="ist" class="s"></span></div><div id="mine" class="a" style="margin-top:6px"></div><div id="rdy" class="a" style="margin-top:10px"></div>`;
+    $('isend').onclick=submitMine;$('giveup').onclick=giveUp;$('chg').onclick=startEdit;$('cancelchg').onclick=cancelEdit;[$('ia'),$('it')].forEach(i=>i.onkeydown=e=>{if(e.key==='Enter')submitMine()});$('ia').focus();
+  }
+  const ready=myReady(),m=S.subs.find(x=>x.turn===R.turn&&x.user_id===user.id);
+  // pode alterar enquanto ainda faltar alguém responder e sobrar tempo
+  const others=S.ready.filter(x=>x.turn===R.turn).length<S.players.length;
+  const canChange=!!(ready&&m&&others&&Date.now()-phaseT0<inputDur(R));
+  if(editing&&!canChange)editing=false;
+  const locked=ready&&!editing;
+  $('ia').disabled=$('it').disabled=locked;$('isend').disabled=locked||sending;$('giveup').disabled=ready;
+  $('chg').hidden=!(canChange&&!editing);$('cancelchg').hidden=!editing;
+  if(editing){
+    $('ist').textContent=tr('editando…');$('ist').className='s';
+    $('mine').innerHTML=tr("Sua música atual (<b>{track}</b> — {artist}) continua valendo até você enviar a nova.",{track:esc(m.track),artist:esc(m.artist)});
+  }else if(ready){
+    $('ist').textContent=m?tr('✔ enviada'):tr('desistiu');$('ist').className='s '+(m?'good':'nope');
+    $('mine').innerHTML=m?tr('Sua escolha: <b>{track}</b> — {artist}',{track:esc(m.track),artist:esc(m.artist)}):tr('Você desistiu deste turno (0 pontos).');
+  }
+  $('rdy').innerHTML=tr('Envios: ')+S.players.map(p=>{const ok=S.ready.some(x=>x.turn===R.turn&&x.user_id===p.user_id);return `<span class="pl">${esc(p.display_name)} ${ok?'✔':'…'}</span>`}).join('');
+}
+let sending=false,editing=false;
+function startEdit(){editing=true;$('ia').value='';$('it').value='';renderInput();$('ia').focus()}
+function cancelEdit(){editing=false;$('ia').value='';$('it').value='';renderInput()}
+async function giveUp(){
+  const R=S.room;if(!R||R.phase!=='input'||myReady()||sending)return;
+  if(!confirm(tr('Desistir deste turno? Você fica com 0 pontos nele.')))return;
+  const {error}=await sb.rpc('pdv_skip',{p_room:ROOM_ID});
+  if(error)return toast(errMsg(error));
+  S.ready.push({room_id:ROOM_ID,turn:R.turn,user_id:user.id});renderInput();schedule();
+}
+async function submitMine(){
+  const R=S.room;if(!R||R.phase!=='input'||(myReady()&&!editing)||sending)return;
+  const a=$('ia').value.trim(),t=$('it').value.trim(),st=$('ist');
+  if(!a||!t){st.textContent=tr('Preencha banda e música');st.className='s nope';return}
+  sending=true;$('isend').disabled=true;st.textContent=tr('Procurando…');st.className='s';
+  try{
+    const s=await findSong(a,t);
+    if(!s){st.textContent=tr('Não achei — confira banda e música');st.className='s nope';$('isend').disabled=false}
+    else{
+      const {error}=await sb.rpc('pdv_submit',{p_room:ROOM_ID,p_key:s.key,p_track:s.track,p_artist:s.artist,p_art:s.art,p_preview:s.preview});
+      if(error){
+        st.textContent=errMsg(error);st.className='s nope';$('isend').disabled=false;
+        if((error.message||'').includes('cannot_change')||(error.message||'').includes('time_over')){editing=false;schedule()}
+      }else{
+        const changed=editing;
+        if(!S.ready.some(x=>x.turn===R.turn&&x.user_id===user.id))S.ready.push({room_id:ROOM_ID,turn:R.turn,user_id:user.id});
+        S.subs=S.subs.filter(x=>!(x.turn===R.turn&&x.user_id===user.id));
+        S.subs.push({room_id:ROOM_ID,turn:R.turn,user_id:user.id,song_key:s.key,track:s.track,artist:s.artist});
+        editing=false;$('ia').value='';$('it').value='';
+        if(changed)toast(tr('Música alterada!'));
+        renderInput();schedule()}
+    }
+  }catch(e){st.textContent=tr('Erro: ')+e.message;st.className='s nope';$('isend').disabled=false}
+  sending=false;
+}
+
+/* revelação: cartões + votos */
+function renderReveal(){
+  const R=S.room,gs=groups(),sig=R.turn+'|'+gs.map(g=>g.key+g.by.length).join(',');
+  if(sig!==songsSig){songsSig=sig;
+    $('cards').innerHTML='';
+    gs.forEach((g,i)=>{
+      const c=document.createElement('div');c.className='card';c.id='c'+i;
+      c.innerHTML=`<div class="row"><img src="${esc(g.s.art)}" alt=""><div style="flex:1">
+        <div class="t">${esc(g.s.track)}</div><div class="a">${esc(g.s.artist)}</div>
+        <div class="by"></div><button class="ghost pbtn" style="margin-top:6px">${tr('▶ Tocar 20s')}</button><div class="bar"><i></i></div></div></div>
+        <div class="vd"></div><div class="pline"></div><div class="vts"></div><div class="res"></div>`;
+      c.querySelector('.pbtn').onclick=()=>playIdx(i);
+      $('cards').appendChild(c);
+    });
+    if(!gs.length)$('cards').innerHTML='<div class="sum">'+tr('Ninguém enviou música neste turno.')+'</div>';
+  }
+  gs.forEach((g,i)=>updateCard(g,i));
+  const done=R.phase==='done';
+  const missing=S.players.filter(p=>!gs.some(g=>g.by.includes(p.user_id)));
+  let h=missing.length?'<div class="sum">'+tr('Não enviaram (0 pts): <b>{names}</b>',{names:missing.map(p=>esc(p.display_name)).join(', ')})+'</div>':'';
+  if(done){
+    const rs=S.results.filter(x=>x.turn===R.turn);
+    h+='<div class="sum">'+tr('<b>Pontos do turno:</b> {list}',{list:S.players.map(p=>`${esc(p.display_name)} +${(rs.find(x=>x.user_id===p.user_id)||{points:0}).points}`).join(' · ')})+'</div>';
+  }
+  $('sum').innerHTML=h;
+  $('nextnow').hidden=!(done&&isHost());
+}
+function updateCard(g,i){
+  const R=S.room,c=$('c'+i);if(!c)return;
+  const dup=g.by.length>1;
+  c.querySelector('.by').innerHTML=tr('Escolhida por: <b>{names}</b> ',{names:g.by.map(u=>esc(pname(u))).join(', ')})+(dup?'<span class="dup">'+tr('⚠ música repetida — pontuação reduzida')+'</span>':'');
+  const L=lyr[R.turn+'|'+g.key],vd=c.querySelector('.vd');
+  if(!L||L.state==='loading'){vd.textContent=tr('Conferindo a letra…');vd.className='vd'}
+  else if(L.state==='none'){vd.textContent=tr('⚠ Letra não encontrada (sem checagem automática)');vd.className='vd nope'}
+  else if(L.state==='ok'){const h=hitOf(L.line);vd.textContent=tr('✔ A letra contém “{h}”',{h})+(norm(h)!==norm(word)?` (${word})`:'');vd.className='vd good'}
+  else{vd.textContent=tr('✘ A letra NÃO contém: {forms}',{forms:wf().join(' / ')});vd.className='vd nope'}
+  c.querySelector('.pline').innerHTML=L&&L.state==='ok'?'“'+hl(L.line)+'”':'';
+  // votos
+  const vs=S.votes.filter(v=>v.turn===R.turn&&v.song_key===g.key);
+  const voters=S.players.filter(p=>!g.by.includes(p.user_id)).length;
+  const up=vs.filter(v=>v.value===1).length,dn=vs.filter(v=>v.value===-1).length,neu=voters-up-dn;
+  const mine=g.by.includes(user.id),my=(vs.find(v=>v.voter_id===user.id)||{value:0}).value;
+  const box=c.querySelector('.vts');
+  const canVote=!mine&&R.phase==='reveal';
+  // só reconstrói o bloco quando algo mudou (evita perder o clique no meio de uma atualização)
+  const sig=[mine,canVote,my,up,neu,dn,LANG].join('|');
+  if(box.dataset.sig!==sig){
+    box.dataset.sig=sig;
+    const btns=canVote?`<div class="vr"><button class="vb up ${my===1?'on':''}" data-i="${i}" data-v="1">${tr('👍 Correta')}</button><button class="vb neu ${my===0?'on':''}" data-i="${i}" data-v="0">${tr('🤷 Não conheço')}</button><button class="vb dn ${my===-1?'on':''}" data-i="${i}" data-v="-1">${tr('👎 Errada')}</button></div>`
+      :mine?`<div class="a">${tr('Esta é a sua música — os outros avaliam.')}</div>`:'';
+    box.innerHTML=btns+`<div class="a" style="margin-top:4px">👍 ${up} · 🤷 ${neu} · 👎 ${dn}</div>`;
+  }
+  const rows=S.results.filter(x=>x.turn===R.turn&&x.song_key===g.key),rEl=c.querySelector('.res');
+  if(rows.length){const r0=rows[0];rEl.className='res '+(r0.accepted?'good':'nope');
+    rEl.innerHTML=(r0.accepted?tr('✔ Aceita (base {base} + {bonus} de bônus)',{base:r0.base,bonus:r0.bonus}):tr('✘ Recusada — 0 pts'))+'<div class="a" style="font-weight:400">'+rows.map(x=>`${esc(pname(x.user_id))}: <b>+${x.points}</b>`).join('<br>')+'</div>'}
+  else rEl.textContent='';
+}
+$('cards').addEventListener('click',e=>{
+  const b=e.target.closest('.vb[data-i]');if(!b)return;
+  const g=groups()[+b.dataset.i];if(g)vote(g.key,+b.dataset.v);
+});
+async function vote(key,val){
+  const R=S.room;if(R.phase!=='reveal')return;
+  const old=S.votes.find(v=>v.turn===R.turn&&v.song_key===key&&v.voter_id===user.id);
+  if(old)old.value=val;else S.votes.push({room_id:ROOM_ID,turn:R.turn,song_key:key,voter_id:user.id,value:val});
+  groups().forEach((g,i)=>updateCard(g,i));
+  const {error}=await sb.rpc('pdv_vote',{p_room:ROOM_ID,p_key:key,p_value:val});
+  if(error){toast(errMsg(error));schedule()}
+}
+async function fetchLyrics(){
+  const R=S.room,w=R.words[R.turn-1];
+  for(const g of groups()){
+    const k=R.turn+'|'+g.key;if(lyr[k])continue;lyr[k]={state:'loading'};
+    getLyrics(g.s.artist,g.s.track).then(async l=>{
+      word=w;const line=l&&findLine(l);
+      lyr[k]=!l?{state:'none'}:line?{state:'ok',line}:{state:'no'};
+      if(isHost())sb.rpc('pdv_set_auto',{p_room:ROOM_ID,p_key:g.key,p_ok:!!line});
+      if(S.room&&S.room.turn===R.turn)groups().forEach((gg,i)=>updateCard(gg,i));
+    });
+  }
+}
+function playIdx(i){
+  stopAudio();const g=groups()[i];if(!g)return;
+  const c=$('c'+i);if(!c)return;c.classList.add('now');setSpot(g.by);
+  audio=new Audio(g.s.preview);audio.volume=curVol();audio.play().catch(()=>{});
+}
+const LVL_OPTS=[['facil','Fácil — palavras muito comuns'],['medio','Médio — comuns, mas menos óbvias'],['dificil','Difícil — palavras raras em letras']];
+const SECS_OPTS=[10,15,20,30,45,60];
+function renderEnd(){
+  const R=S.room,k='end'+R.id+LANG;$('timer').textContent='';
+  if(builtIn===k)return;builtIn=k;
+  const rk=[...S.players].sort((a,b)=>b.score-a.score);
+  const rows=rk.map((p,i)=>`<div class="rk"><span class="pos">${['🥇','🥈','🥉'][i]||(i+1)+'º'}</span>${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="" onerror="this.style.visibility='hidden'">`:`<span class="ini">${esc((p.display_name||'?')[0].toUpperCase())}</span>`}<span class="nm">${esc(p.display_name)}</span><b>${p.score} pts</b></div>`).join('');
+  const host=isHost();
+  const next=host?`<div class="sum" style="margin-top:12px"><b>${tr('Jogar de novo com os mesmos jogadores')}</b>
+    <div class="fld">${tr('Dificuldade')}<select id="lvl2">${LVL_OPTS.map(o=>`<option value="${o[0]}" ${o[0]===R.level?'selected':''}>${tr(o[1])}</option>`).join('')}</select></div>
+    <div class="fld">${tr('Tempo para escolher a música')}<select id="secs2">${SECS_OPTS.map(x=>`<option value="${x}" ${x===R.input_secs?'selected':''}>${tr('{x} segundos',{x})}</option>`).join('')}</select></div>
+    <label class="chk"><input type="checkbox" id="battle2" ${R.battle?'checked':''}><span><b>${tr('⚡ Modo Battle Royale')}</b></span></label>
+    <div class="ctl"><button id="rematch">${tr('▶ Jogar novamente')}</button></div></div>`
+    :`<div class="a" style="margin-top:12px">${tr('A sala <b>{code}</b> continua aberta. Aguardando o admin começar uma nova partida…',{code:esc(R.code)})}</div>`;
+  $('a-end').innerHTML='<h2 style="margin-top:0">'+tr('🏆 Ranking final')+'</h2>'+rows+next;
+  if(host)$('rematch').onclick=async()=>{beep(440,.08);
+    const {error}=await sb.rpc('pdv_rematch',{p_room:ROOM_ID,p_level:$('lvl2').value,p_secs:+$('secs2').value,p_battle:$('battle2').checked});
+    if(error)toast(errMsg(error));else{lyr={};called=new Set();schedule()}};
+}
+function renderHistory(){
+  const R=S.room;if(!R||!R.words.length){$('histbody').innerHTML='<div class="a">'+tr('Nenhum turno ainda.')+'</div>';return}
+  const upto=R.phase==='done'||R.phase==='finished'?R.turn:R.turn-1;
+  let h='<div class="a" style="margin:6px 0">'+tr('Sorteadas: <b>{list}</b>',{list:R.words.slice(0,R.turn-(R.phase==='countdown'?1:0)).join(' · ')||'—'})+'</div>';
+  for(let t=upto;t>=1;t--){
+    const rs=S.results.filter(x=>x.turn===t);
+    h+='<div class="sum" style="margin:6px 0">'+tr('<b>Turno {t} · {w}</b>',{t,w:esc(R.words[t-1])})+(rs.length?rs.map(x=>{const s=S.subs.find(z=>z.turn===t&&z.user_id===x.user_id);return `<div class="a">${esc(pname(x.user_id))}: ${s?esc(s.track)+' — '+esc(s.artist):'?'} ${x.accepted?`<span class="good">+${x.points}</span>`:'<span class="nope">'+tr('recusada')+'</span>'}</div>`}).join(''):'<div class="a">'+tr('Ninguém enviou')+'</div>')+'</div>';
+  }
+  $('histbody').innerHTML=h;
+}
+
+/* ---------- relógio da partida (todos) + condução (só o admin) ---------- */
+function hostCall(tag,fn,args){
+  const k=lastKey+tag;if(called.has(k))return;called.add(k);
+  sb.rpc(fn,args).then(({error})=>{if(error){setTimeout(()=>called.delete(k),700);console.warn(fn,error.message)}else schedule()});
+}
+setInterval(()=>{
+  const R=S.room;if(!R||!ROOM_ID)return;
+  const age=Date.now()-phaseT0,cd=$('cd');
+  if(R.phase==='countdown'){
+    cd.hidden=false;$('cdl').textContent=tr('Turno {turn}/{total} — prepare-se!',{turn:R.turn,total:R.total_turns});
+    const n=COUNT_SECS-Math.floor(age/1000),lab=n>0?n:tr('VAI!');
+    if(lab!==lastCdN){lastCdN=lab;const el=$('cdn');el.textContent=lab;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');beep(n>0?660:1040,n>0?.18:.5)}
+    if(isHost()&&age>=3100)hostCall('bi','pdv_begin_input',{p_room:ROOM_ID});
+  }else cd.hidden=true;
+  if(R.phase==='input'&&builtIn==='in'+R.turn&&Date.now()-(tick.ri||0)>500){tick.ri=Date.now();renderInput()}
+  if(R.phase==='input'){
+    const dur=inputDur(R),left=Math.max(0,Math.ceil((dur-age)/1000));
+    const all=S.ready.filter(x=>x.turn===R.turn).length>=S.players.length;
+    const tm=$('timer');
+    tm.textContent=all?tr('Todos responderam — revelando…'):left>0?'⏱ '+left+'s':tr('Aguardando envios…');
+    if(!all&&Date.now()<flashUntil){const f=document.createElement('span');f.className='flash';f.textContent=flashText;tm.appendChild(f)}
+    tm.classList.toggle('urgent',!all&&left>0&&left<=5);
+    if(isHost()&&((all&&age>700)||age>=dur+3200))hostCall('br','pdv_begin_reveal',{p_room:ROOM_ID});
+  }
+  if(R.phase!=='input')$('timer').classList.remove('urgent');
+  if(R.phase==='reveal'){
+    const n=groups().length,total=n*SONG_MS+8000,idx=Math.floor(age/SONG_MS);
+    const secL=Math.max(0,Math.ceil((total-age)/1000));$('timer').textContent=age<n*SONG_MS?tr('Ouvindo {i}/{n} · votação encerra em {s}s',{i:Math.min(idx+1,n),n,s:secL}):tr('Votação encerra em {s}s',{s:secL});
+    if(idx<n&&idx!==tick.cur&&$('c'+idx)){tick.cur=idx;playIdx(idx)}
+    if(audio&&idx<n){const bar=document.querySelector(`#c${idx} .bar i`);if(bar)bar.style.width=Math.min((age%SONG_MS)/SONG_MS,1)*100+'%'}
+    if(idx>=n&&audio){stopAudio()}
+    if(isHost()&&age>=total)hostCall('fin','pdv_finalize_turn',{p_room:ROOM_ID});
+  }
+  if(R.phase==='done'){
+    $('timer').textContent=tr('Próximo turno em {s}s',{s:Math.max(0,Math.ceil((10000-age)/1000))});
+    if(isHost()&&age>=10000)hostCall('nx','pdv_next_turn',{p_room:ROOM_ID});
+  }
+  if(R.phase!=='reveal')tick.cur=-1;
+},100);
+function tick(){}tick.cur=-1;
+
+/* ---------- início ---------- */
+function setLang(l){
+  if(!LANGS[l])return;
+  LANG=l;try{localStorage.setItem('pdv_lang',l)}catch(e){}
+  const ia=$('ia')?$('ia').value:'',it=$('it')?$('it').value:'';
+  applyStatic();
+  renderMe();
+  mountSuggest($('sugHome'));mountSuggest($('sugLobby'));
+  if(user){refreshSuggestLists();if(!ROOM_ID)checkActive()}
+  if(ROOM_ID&&S.room){
+    builtIn='';songsSig='';$('howbody').dataset.sig='';
+    render();
+    if($('ia')){$('ia').value=ia;$('it').value=it}
+  }
+  $('lang').value=l;
+}
+$('lang').onchange=e=>setLang(e.target.value);
+$('lang').value=LANG;
+if(LANG!=='pt')applyStatic();
+
+applyVol();
+(async()=>{
+  $('fileWarn').hidden=location.protocol!=='file:';
+  const {data:{session}}=await sb.auth.getSession();
+  setUser(session?session.user:null);
+  sb.auth.onAuthStateChange((ev,s)=>{const u=s?s.user:null;if((u&&u.id)!==(user&&user.id))setUser(u)});
+})();
+</script>
+</body>
+</html>
