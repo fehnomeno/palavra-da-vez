@@ -365,47 +365,100 @@ function lev(a,b){
   for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}
   return prev[n];
 }
-// erros tolerados conforme o tamanho do texto digitado (curtos exigem exatidão)
+// erros de digitação tolerados conforme o tamanho (nomes curtos exigem exatidão)
 const allow=n=>n<=3?0:n<=7?1:n<=14?2:3;
-// distância entre o que foi digitado (q) e o texto do catálogo (t): 0 se um contém o outro
-function dist(t,q){
-  if(!q)return 0;if(!t)return 99;
-  if(t.includes(q)||(q.includes(t)&&t.length>=Math.max(3,q.length*.5)))return 0;
-  let best=lev(q,t);const L=q.length;
-  for(const w of [L-1,L,L+1]){if(w<1||w>t.length)continue;for(let i=0;i+w<=t.length;i++){const d=lev(q,t.substr(i,w));if(d<best)best=d}}
+const compact=s=>flat(s).replace(/ /g,'');
+// BANDA/GRUPO: o digitado tem de ser o nome INTEIRO (com poucos erros de digitação), nunca um pedaço.
+// Variantes aceitas do nome do catálogo: completo, cada nome de uma dupla/participação e sem artigo/prefixo ("The Beatles" → "beatles")
+const ART_DROP=new Set(['the','os','as','o','a','los','las','el','la','le','les','mc','dj','banda','grupo','mr','dr']);
+function artistVariants(raw){
+  const parts=[raw,...raw.split(/\s*(?:&|,|;|\+|\bfeat\.?|\bft\.?|\bfeaturing\b|\bcom\b|\bwith\b)\s*/i)];
+  const out=new Set();
+  for(const p of parts){
+    const f=flat(p);if(!f)continue;const c=f.replace(/ /g,'');
+    if(c.length>=2||p===raw)out.add(c);
+    const tk=f.split(' ');if(tk.length>1&&ART_DROP.has(tk[0])){const r=tk.slice(1).join('');if(r.length>=2)out.add(r)}
+  }
+  return [...out];
+}
+// devolve o nº de erros (0..3) ou null se o digitado NÃO corresponde ao nome. Letras soltas e começos de nome (N, Ni, Nir) não valem
+function artistDist(typedRaw,raw){
+  const typed=compact(typedRaw);if(typed.length<2)return null;
+  let best=null;
+  for(const v of artistVariants(raw)){
+    const d=lev(typed,v);
+    // com erro de digitação: até allow(tamanho do nome oficial) erros, pelo menos 4 letras digitadas e pelo menos 75% do tamanho do nome
+    if(d===0||(d<=allow(v.length)&&typed.length>=4&&typed.length>=Math.ceil(.75*v.length)))if(best===null||d<best)best=d;
+  }
   return best;
 }
-// custo de uma faixa do catálogo para o que foi digitado; null = diferente demais
-function cost(nt,na,x){
-  const full=flat(x.trackName),cl=flat(clean(x.trackName)),a=flat(x.artistName);
-  const dt=Math.min(dist(full,nt),dist(cl,nt)),da=dist(a,na);
-  if(dt>allow(nt.length)||da>allow(na.length))return null;
-  return{dt,da,exact:(full===nt||cl===nt)?1:0};
+// MÚSICA: título inteiro (ou uma parte dele: subtítulo, texto entre parênteses, antes/depois de " - " ou "/"), com poucos erros.
+// Um trecho só vale se tiver 2+ palavras, 6+ letras e cobrir mais da metade do título
+function titleVariants(raw){
+  const out=new Set(),add=x=>{const c=compact(x);if(c)out.add(c)};
+  add(raw);add(clean(raw));
+  (raw.match(/[\(\[][^\)\]]+[\)\]]/g)||[]).forEach(m=>add(m.slice(1,-1)));
+  raw.split(/\s+[-–—]\s+|\s*\/\s*/).forEach(add);
+  return [...out];
+}
+function titleDist(typedRaw,raw){
+  const typed=compact(typedRaw);if(!typed)return null;
+  const words=flat(typedRaw).split(' ').length;
+  let best=null;const upd=d=>{if(best===null||d<best)best=d};
+  for(const v of titleVariants(raw)){
+    const d=lev(typed,v);
+    if(d===0||(d<=allow(v.length)&&typed.length>=4&&typed.length>=Math.ceil(.75*v.length)))upd(d);
+    if(words>=2&&typed.length>=6&&v.length>typed.length&&typed.length>=Math.ceil(.55*v.length)){
+      let pd=99;
+      for(let w=typed.length-1;w<=typed.length+1;w++)for(let i=0;i+w<=v.length;i++){const e=lev(typed,v.substr(i,w));if(e<pd)pd=e}
+      if(pd<=allow(typed.length))upd(pd+1);   // trecho: um pouco pior que o título inteiro
+    }
+  }
+  return best;
+}
+// custo de uma faixa do catálogo para o que foi digitado; null = não corresponde
+function cost(track,artist,x){
+  const dt=titleDist(track,x.trackName),da=artistDist(artist,x.artistName);
+  if(dt===null||da===null)return null;
+  const nt=compact(track);
+  return{dt,da,exact:(nt===compact(x.trackName)||nt===compact(clean(x.trackName)))?1:0};
 }
 /*FUZZY-END*/
 async function findSong(artist,track){
-  const nt=flat(track),na=flat(artist);if(!nt||!na)return null;
+  if(!compact(track)||!compact(artist))return null;
   const it=x=>({trackName:x.trackName,artistName:x.artistName,art:(x.artworkUrl100||'').replace('100x100','300x300'),previewUrl:x.previewUrl});
   const dz=x=>({trackName:x.title,artistName:x.artist&&x.artist.name,art:x.album&&x.album.cover_big,previewUrl:x.preview});
   const I=t=>jsonp('https://itunes.apple.com/search?entity=song&limit=50&country=BR&term='+encodeURIComponent(t)).then(d=>d.results.map(it));
   const D=t=>jsonp('https://api.deezer.com/search?limit=40&output=jsonp&q='+encodeURIComponent(t)).then(d=>d.data.map(dz));
-  // várias buscas ao mesmo tempo: texto original, sem acento/maiúsculas, só música, só banda
-  const res=await Promise.allSettled([I(artist+' '+track),I(na+' '+nt),I(track),I(artist),D(artist+' '+track),D(artist)]);
+  const IA=t=>jsonp('https://itunes.apple.com/search?entity=musicArtist&limit=15&country=BR&term='+encodeURIComponent(t)).then(d=>d.results.map(x=>x.artistName).filter(Boolean));
+  const DA=t=>jsonp('https://api.deezer.com/search/artist?limit=15&output=jsonp&q='+encodeURIComponent(t)).then(d=>d.data.map(x=>x.name).filter(Boolean));
+  const songQs=[I(artist+' '+track),I(flat(artist)+' '+flat(track)),I(track),I(artist),D(artist+' '+track),D(artist)];
+  const res=await Promise.allSettled([...songQs,IA(artist),DA(artist)]);
   if(res.every(r=>r.status==='rejected'))throw new Error(tr('sem conexão com os catálogos'));
-  const seen=new Set(),cands=[];
-  res.forEach((r,si)=>{if(r.status!=='fulfilled')return;
-    r.value.forEach((x,i)=>{
-      if(!x.previewUrl||!x.trackName||!x.artistName)return;
-      const k=norm(clean(x.trackName))+'|'+norm(x.artistName);if(seen.has(k))return;seen.add(k);
-      const c=cost(nt,na,x);if(c)cands.push({x,c,o:si*100+i});
-    });
+  const seen=new Set(),cands=[],artists=new Set();
+  const add=(list,si)=>list.forEach((x,i)=>{
+    if(!x.previewUrl||!x.trackName||!x.artistName)return;
+    artists.add(x.artistName);
+    const k=norm(clean(x.trackName))+'|'+norm(x.artistName);if(seen.has(k))return;seen.add(k);
+    const c=cost(track,artist,x);if(c)cands.push({x,c,o:si*100+i});
   });
+  res.forEach((r,si)=>{if(r.status!=='fulfilled')return;if(si<songQs.length)add(r.value,si);else r.value.forEach(n=>artists.add(n))});
+  const best=()=>cands.length?Math.min(...cands.map(c=>c.c.dt+c.c.da)):Infinity;
+  // 2ª rodada: se o catálogo não achou (nome com erro de digitação), busca pelo nome OFICIAL do artista que mais se aproxima do digitado
+  if(best()>0){
+    const names=[...artists].map(n=>({n,d:artistDist(artist,n)})).filter(o=>o.d!==null).sort((a,b)=>a.d-b.d).slice(0,2).map(o=>o.n);
+    if(names.length){
+      const r2=await Promise.allSettled(names.flatMap(n=>[I(n+' '+track),I(n),D(n+' '+track),D(n)]));
+      r2.forEach((r,si)=>{if(r.status==='fulfilled')add(r.value,100+si)});
+    }
+  }
   if(!cands.length)return null;
   // mais próximo primeiro: menos erros, depois título exato, depois ordem do catálogo
   cands.sort((a,b)=>(a.c.dt+a.c.da)-(b.c.dt+b.c.da)||b.c.exact-a.c.exact||a.o-b.o);
   const x=cands[0].x;
   return{key:norm(clean(x.trackName))+'|'+norm(x.artistName),track:x.trackName,artist:x.artistName,art:x.art,preview:x.previewUrl};
 }
+
 async function getLyrics(artist,track){
   try{
     const p=`artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(clean(track))}`;
@@ -764,24 +817,37 @@ function groups(){
   const g={};S.subs.filter(s=>s.turn===S.room.turn).forEach(s=>{(g[s.song_key]??={key:s.song_key,s,by:[]}).by.push(s.user_id)});
   return Object.values(g).sort((a,b)=>a.key<b.key?-1:1);
 }
-async function pickWords(level,n){
+/* ---------- sorteio das palavras ---------- */
+// gerador de números aleatórios forte (o do navegador, nível criptográfico); se não existir, usa Math.random
+function rng(){
+  try{const a=new Uint32Array(2);crypto.getRandomValues(a);return((a[0]>>>5)*67108864+(a[1]>>>6))/9007199254740992}
+  catch(e){return Math.random()}
+}
+// embaralhamento de Fisher–Yates (sem viés)
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+// sorteia n palavras do nível. "used" = histórico da sala (do mais antigo ao mais recente):
+// as palavras das últimas 2 partidas (2n palavras) ficam de fora do sorteio, então não repetem em partidas seguidas
+async function pickWords(level,n,used){
   await loadCustomWords();
   let prev=[];try{prev=JSON.parse(localStorage.getItem('pdv_last_'+level)||'[]')}catch(e){}
   let sc={};
   try{const {data}=await sb.rpc('pdv_word_scores');(data||[]).forEach(x=>sc[x.word]=x)}catch(e){}
-  // peso: 1 sem votos; sobe até ~2 com muitos 👍 e cai até 0,15 com muitos 👎; palavras da partida anterior pesam metade
-  const pool=Object.keys(LEVELS[level].w).map(w=>{
-    const v=sc[w]||{up:0,down:0};
-    let wt=Math.max(.15,1+(v.up-v.down)/(v.up+v.down+4));if(prev.includes(w))wt*=.5;
-    return{w,k:Math.pow(Math.random(),1/wt)};     // amostragem ponderada sem reposição
-  });
-  const words=pool.sort((a,b)=>b.k-a.k).slice(0,n).map(o=>o.w).sort(()=>Math.random()-.5);
-  try{localStorage.setItem('pdv_last_'+level,JSON.stringify(words))}catch(e){}
-  return words;
+  const all=Object.keys(LEVELS[level].w);
+  // peso pelas avaliações: 1 sem votos; até ~2 com muitos 👍; mínimo 0,15 com muitos 👎 (amostragem ponderada sem reposição)
+  const weight=w=>{const v=sc[w]||{up:0,down:0};return Math.max(.15,1+(v.up-v.down)/(v.up+v.down+4))};
+  const draw=(cands,k)=>cands.map(w=>({w,key:Math.pow(rng(),1/weight(w))})).sort((a,b)=>b.key-a.key).slice(0,k).map(o=>o.w);
+  // palavras a evitar: as mais recentes da sala; em sala nova, a memória deste navegador. Sempre sobram pelo menos n candidatas
+  const K=Math.max(0,Math.min(2*n,all.length-n)),avoid=[];
+  const hist=(used||[]).filter(w=>all.includes(w));
+  for(let i=hist.length-1;i>=0&&avoid.length<K;i--)if(!avoid.includes(hist[i]))avoid.push(hist[i]);
+  for(let i=prev.length-1;i>=0&&avoid.length<K;i--)if(all.includes(prev[i])&&!avoid.includes(prev[i]))avoid.push(prev[i]);
+  const words=shuffle(draw(all.filter(w=>!avoid.includes(w)),n));
+  try{localStorage.setItem('pdv_last_'+level,JSON.stringify([...prev,...words].slice(-20)))}catch(e){}
+  return{words,used:[...(used||[]),...words].slice(-300)};
 }
 $('start').onclick=async()=>{beep(440,.08);
-  const words=await pickWords(S.room.level,S.room.total_turns);
-  const {error}=await sb.rpc('pdv_start_game',{p_room:ROOM_ID,p_words:words});
+  const pk=await pickWords(S.room.level,S.room.total_turns,S.room.used_words||[]);
+  const {error}=await sb.rpc('pdv_start_game',{p_room:ROOM_ID,p_words:pk.words,p_used:pk.used});
   if(error)toast(errMsg(error));else schedule()};
 $('nextnow').onclick=()=>hostCall('nn','pdv_next_turn',{p_room:ROOM_ID});
 $('finishnow').onclick=()=>hostCall('fn','pdv_finalize_turn',{p_room:ROOM_ID});
