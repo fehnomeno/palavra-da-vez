@@ -401,6 +401,7 @@ LEVELS.misto={label:'Misto',w:{}};
 const mixedWords=()=>{const o={};for(const lv of ['facil','medio','dificil'])Object.assign(o,LEVELS[lv].w);return o};
 
 
+let ACTIVE_ROOM=null,ACTIVE_HOST=false;   // sala em que a pessoa ainda está (mesmo fora da tela da sala)
 const COUNT_SECS=3,TURNS=10,NEXT_TURN_MS=5000;   // espera entre o resultado de um turno e o próximo
 // tempo de cada música na revelação: 15s até 8 músicas; depois diminui (mínimo 6s) para a revelação não durar uma eternidade
 const songMs=n=>n<=8?15000:Math.max(6000,Math.round(120000/n/1000)*1000);
@@ -716,7 +717,16 @@ $('sharebtn').onclick=()=>navigator.share({title:tr('SongRush – Online'),text:
 function renderMe(){
   if(!user)return;
   $('me').innerHTML=(me.avatar?`<img src="${esc(me.avatar)}" alt="">`:'')+`<b>${esc(me.name)}</b> <button class="ghost" id="logout">${tr('Sair')}</button>`;
-  $('logout').onclick=async()=>{leaveRoom(true);await sb.auth.signOut()};
+  $('logout').onclick=async()=>{
+    const target=ROOM_ID||ACTIVE_ROOM;
+    if(target){
+      const host=(S.room&&S.room.id===target&&isHost())||(!ROOM_ID&&ACTIVE_HOST);
+      if(!confirm(tr(host?'Você é o admin: sair encerra a sala para todos. Continuar?':'Sair da sala definitivamente?')))return;
+      const {error}=await sb.rpc('pdv_leave_room',{p_room:target});
+      if(error)return toast(errMsg(error));
+    }
+    ACTIVE_ROOM=null;ACTIVE_HOST=false;leaveRoom(true);await sb.auth.signOut();
+  };
 }
 function setUser(u){
   user=u;
@@ -732,7 +742,7 @@ function setUser(u){
 }
 $('tw').onclick=()=>sb.auth.signInWithOAuth({provider:'twitch',options:{redirectTo:location.origin+location.pathname}});
 /* ---------- palavras sugeridas pelos jogadores ---------- */
-const customKeys=new Set(),customAuthors={};
+const customKeys=new Set(),customAuthors={},customTr={};
 async function loadCustomWords(){
   try{
     const {data}=await sb.rpc('pdv_custom_words');
@@ -740,6 +750,7 @@ async function loadCustomWords(){
       if(WORDS[r.word]&&!customKeys.has(r.word))return;
       const nk=norm(r.word);if(Object.keys(WORDS).some(k=>!customKeys.has(k)&&norm(k)===nk))return;   // já existe no jogo (sem acento/maiúscula)          // palavra do jogo tem prioridade
       const f=[r.word,r.en,r.es].filter(Boolean);
+      customTr[r.word]={en:r.en||'',es:r.es||''};   // traduções guardadas à parte (não dependem da posição na lista)
       customKeys.add(r.word);LEVELS[r.level].w[r.word]=f;WORDS[r.word]=f;customAuthors[r.word]=r.author||'';
     });
   }catch(e){}
@@ -827,8 +838,9 @@ $('admList').addEventListener('click',async e=>{
 mountSuggest($('sugHome'));mountSuggest($('sugLobby'));
 async function checkActive(){
   refreshSuggestLists();
-  const {data}=await sb.from('pdv_players').select('room_id,pdv_rooms(code,status,created_at)').eq('user_id',user.id);
+  const {data}=await sb.from('pdv_players').select('room_id,pdv_rooms(code,status,created_at,host_id)').eq('user_id',user.id);
   const act=(data||[]).filter(x=>x.pdv_rooms).sort((a,b)=>b.pdv_rooms.created_at.localeCompare(a.pdv_rooms.created_at));
+  ACTIVE_ROOM=act.length?act[0].room_id:null;ACTIVE_HOST=act.length?act[0].pdv_rooms.host_id===user.id:false;
   const box=$('resume');
   if(!act.length){box.hidden=true;return}
   box.hidden=false;box.innerHTML=tr("Você está na sala <b>{code}</b>. <button id=\"back\">Voltar para a sala</button>",{code:esc(act[0].pdv_rooms.code)});
@@ -1050,7 +1062,7 @@ function render(){
     if(word&&!WORDS[word]){render.unk=(render.unk||0)+1;if(render.unk<=3){loadCustomWords().then(()=>render());return}}
     {const top=[...S.players].sort((a,b)=>b.score-a.score);$('score').innerHTML=top.slice(0,10).map(p=>`<span class="chip">${esc(p.display_name)}: <b>${p.score}</b></span>`).join('')+(top.length>10?`<span class="chip">+${top.length-10}</span>`:'')}
     const hide=R.phase==='countdown';
-    $('word').textContent=hide?'• • •':word;
+    $('word').textContent=hide?'• • •':displayWord(word);
     $('langs').textContent=hide?'':tr('Vale em PT · EN · ES: ')+forms().join(' · ');
     {const au=!hide&&customAuthors[word],wa=$('wauthor');wa.hidden=!au;wa.innerHTML=au?tr('💡 sugerida por <b>{nick}</b>',{nick:esc(customAuthors[word])}):''}
     $('turnlbl').textContent=tr('Turno {turn}/{total} · {level} · palavra da vez',{turn:R.turn,total:R.total_turns,level:tr(LEVELS[R.level].label)});
@@ -1235,6 +1247,14 @@ function renderEnd(){
   if(host)$('rematch').onclick=async()=>{beep(440,.08);
     const {error}=await sb.rpc('pdv_rematch',{p_room:ROOM_ID,p_level:$('lvl2').value,p_secs:+$('secs2').value,p_battle:$('battle2').checked});
     if(error)toast(errMsg(error));else{lyr={};called=new Set();schedule()}};
+}
+// palavra da vez no idioma escolhido (português é o padrão; sem tradução, mostra a palavra original)
+function displayWord(w){
+  if(!w||LANG==='pt')return w;
+  let t;
+  if(customTr[w])t=customTr[w][LANG];
+  else{const a=WORDS[w]||[];t=LANG==='en'?a[1]:a[2]}
+  return t||w;
 }
 function renderHistory(){
   const R=S.room;if(!R||!R.words.length){$('histbody').innerHTML='<div class="a">'+tr('Nenhum turno ainda.')+'</div>';return}
