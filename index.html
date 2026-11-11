@@ -947,7 +947,7 @@ $('chatbox').addEventListener('toggle',()=>{if($('chatbox').open){chatUnread=0;$
 let pingT=null,pauseAt=null,audioByPause=false;
 function startPing(){
   clearInterval(pingT);
-  const go=()=>{if(ROOM_ID)sb.rpc('pdv_host_ping',{p_room:ROOM_ID}).catch(()=>{})};
+  const go=()=>{if(ROOM_ID)Promise.resolve(sb.rpc('pdv_host_ping',{p_room:ROOM_ID})).catch(()=>{})};   // Promise.resolve: aceita o retorno do Supabase mesmo sem .catch
   go();pingT=setInterval(go,30000);
 }
 function stopPing(){clearInterval(pingT);pingT=null}
