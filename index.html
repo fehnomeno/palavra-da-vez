@@ -434,7 +434,7 @@ const mixedWords=()=>{const o={};for(const lv of ['facil','medio','dificil'])Obj
 
 let ACTIVE_ROOM=null,ACTIVE_HOST=false;   // sala em que a pessoa ainda está (mesmo fora da tela da sala)
 // link de contribuição (Pix, Apoia.se, Ko-fi...). Deixe vazio para não mostrar.
-const SUPPORT_URL='';
+const SUPPORT_URL='https://ko-fi.com/felipebaldo';
 const COUNT_SECS=3,TURNS=10,NEXT_TURN_MS=5000;   // espera entre o resultado de um turno e o próximo
 // tempo de cada música na revelação: 15s até 8 músicas; depois diminui (mínimo 6s) para a revelação não durar uma eternidade
 const songMs=n=>n<=8?15000:Math.max(6000,Math.round(120000/n/1000)*1000);
