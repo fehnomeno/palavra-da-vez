@@ -382,12 +382,6 @@ footer#supportBar{display:flex;flex-direction:column;align-items:center;gap:12px
     <div id="publicRooms" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:10px"></div>
   </section>
   <details id="sugHomeBox" class="sum" style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">💡 Sugerir uma palavra para o sorteio</summary><div id="sugHome"></div></details>
-  <details id="kofiBox" class="sum" style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">💎 Já doou no Ko-fi? Ative seu VIP</summary>
-    <div style="margin-top:8px">
-      <div class="a">Digite o e-mail que você usou na doação do Ko-fi. Cada doação pode ser ativada uma única vez.</div>
-      <div class="ctl"><input id="kofiEmail" type="email" placeholder="seu@email.com" autocomplete="email" style="flex:1"><button id="kofiClaim">Ativar VIP</button></div>
-    </div>
-  </details>
   <details id="fbBox" class="sum" style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">💬 Sugestões e problemas</summary>
     <div style="margin-top:8px">
       <div class="a">Encontrou um erro ou tem uma ideia? Conte pra gente. Você pode anexar um print.</div>
@@ -1102,15 +1096,6 @@ async function sendFeedback(){
   toast(tr('Obrigado! Sua mensagem foi enviada.'),5000);
 }
 $('fbSend').onclick=sendFeedback;
-// ativa o VIP com a doação do Ko-fi feita com este e-mail
-$('kofiClaim').onclick=async()=>{
-  const email=$('kofiEmail').value.trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return toast(tr('Digite um e-mail válido.'));
-  const {data,error}=await sb.rpc('pdv_claim_kofi',{p_email:email});
-  if(error){const m=(error.message||'').includes('not_found')?tr('Não encontramos doação com este e-mail, ou ela já foi ativada.'):errMsg(error);return toast(m)}
-  await loadVipMap();$('kofiEmail').value='';
-  toast(tr('Obrigado pelo apoio! Seu VIP foi ativado. 💎'),6000);
-};
 /* ---------- ranking e perfil ---------- */
 const RK_COL={wins:'wins',points:'points',accepted:'songs_accepted'};
 let rkKind='wins';
@@ -1397,8 +1382,10 @@ $('finishnow').onclick=()=>hostCall('fn','pdv_finalize_turn',{p_room:ROOM_ID});
 /* ---------- render ---------- */
 // Ao publicar uma atualização, altere a versão e registre as novidades neste bloco.
 const RELEASE_INFO={
-  version:'1.0.1',
+  version:'1.0.3',
   updates:[
+    {pt:'Atalho para ativar o VIP do Ko-fi removido da tela inicial.',en:'Ko-fi VIP activation shortcut removed from the home screen.',es:'Se quitó de la pantalla inicial el acceso para activar el VIP de Ko-fi.'},
+    {pt:'Explicação do jogo atualizada: sorteio, envio e votação a cada turno.',en:'How to play updated: word draw, song submission, and voting each turn.',es:'Instrucciones actualizadas: sorteo, envío de canciones y votación por turno.'},
     {pt:'Salas públicas: quatro opções por dificuldade, com entrada sem código.',en:'Public rooms: four difficulty options with code-free entry.',es:'Salas públicas: cuatro opciones por dificultad y acceso sin código.'},
     {pt:'Como jogar resumido em três passos; versão adicionada à tela inicial.',en:'How to play shortened to three steps; version added to the home screen.',es:'Instrucciones resumidas en tres pasos; versión añadida a la pantalla inicial.'},
     {pt:'Ranking conta partidas com 4 ou mais jogadores e destaca os três primeiros.',en:'Rankings count matches with 4 or more players and highlight the top three.',es:'El ranking cuenta partidas de 4 o más jugadores y destaca a los tres primeros.'},
@@ -1417,9 +1404,9 @@ function renderHowTo(R){
   if($('howbody').dataset.sig===sig)return;
   $('howbody').dataset.sig=sig;
   const steps={
-    pt:['A cada turno, descubra a palavra sorteada.','Envie uma música cuja letra tenha essa palavra; depois, todos votam.','Músicas aceitas dão pontos. Vence quem fizer mais pontos.'],
-    en:['Discover the drawn word each turn.','Submit a song with that word in its lyrics; then everyone votes.','Accepted songs earn points. The highest score wins.'],
-    es:['Descubre la palabra sorteada en cada turno.','Envía una canción que la incluya en la letra; después, todos votan.','Las canciones aceptadas dan puntos. Gana quien sume más.']
+    pt:['A cada turno, uma palavra é sorteada.','Envie uma música cuja letra tenha essa palavra. Ao final do turno, todos votam para aceitá-la ou rejeitá-la.','Músicas aceitas dão pontos; músicas repetidas valem menos. Vence quem fizer mais pontos.'],
+    en:['A word is drawn each turn.','Submit a song whose lyrics contain it. At the end of the turn, everyone votes to accept or reject it.','Accepted songs earn points; repeated songs earn fewer. The highest score wins.'],
+    es:['En cada turno se sortea una palabra.','Envía una canción cuya letra la contenga. Al final del turno, todos votan para aceptarla o rechazarla.','Las canciones aceptadas dan puntos; las repetidas valen menos. Gana quien consiga más puntos.']
   };
   $('howbody').innerHTML='<ol style="margin:8px 0 4px;padding-left:22px">'+steps[LANG].map(x=>'<li style="margin:4px 0">'+esc(x)+'</li>').join('')+'</ol>';
 }
