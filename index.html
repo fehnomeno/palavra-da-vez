@@ -1180,7 +1180,7 @@ $('join').onclick=async()=>{beep(440,.08);
   const {data,error}=await sb.rpc('pdv_join_room',{p_code:c,p_name:me.name,p_avatar:me.avatar});
   if(error)return toast(errMsg(error));enterRoom(data.id)};
 let chatLast=0,chatUnread=0;
-const GIPHY_API_KEY='25cfh63TQ2rhhL8AKT40nWv4H3ShtUeZ4'; // chave pública do GIPHY do SongRush
+const GIPHY_API_KEY='5cfh63TQ2rhhL8AKT40nWv4H3ShtUeZ4'; // chave pública do GIPHY do SongRush
 const GIF_TEXT={pt:{loading:'Carregando GIFs…',missing:'Busca do GIPHY ainda não configurada.',empty:'Nenhum GIF encontrado.',failed:'Não foi possível carregar GIFs agora.',search:'Buscar',trending:'Em alta',laugh:'😂 Risadas',applause:'👏 Aplausos',celebrate:'🎉 Comemorar',surprised:'😮 Surpresa',music:'🎵 Música',credit:'via GIPHY'},en:{loading:'Loading GIFs…',missing:'GIPHY search is not configured yet.',empty:'No GIFs found.',failed:'Could not load GIFs right now.',search:'Search',trending:'Trending',laugh:'😂 Laugh',applause:'👏 Applause',celebrate:'🎉 Celebrate',surprised:'😮 Surprise',music:'🎵 Music',credit:'via GIPHY'},es:{loading:'Cargando GIFs…',missing:'La búsqueda de GIPHY aún no está configurada.',empty:'No se encontraron GIFs.',failed:'No se pudieron cargar los GIFs.',search:'Buscar',trending:'En tendencia',laugh:'😂 Risas',applause:'👏 Aplausos',celebrate:'🎉 Celebrar',surprised:'😮 Sorpresa',music:'🎵 Música',credit:'vía GIPHY'}};
 const gifT=k=>(GIF_TEXT[LANG]||GIF_TEXT.pt)[k]||GIF_TEXT.pt[k];
 function chatReset(){chatLast=0;chatUnread=0;$('chatlog').innerHTML='';$('chatbadge').textContent='';$('gifPicker').hidden=true}
