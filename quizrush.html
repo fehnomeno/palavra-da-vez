@@ -45,7 +45,7 @@ select{font:800 16px Nunito,sans-serif;padding:10px;border-radius:10px;backgroun
 .q{font-size:clamp(24px,6vw,34px);line-height:1.15;margin:12px 0 16px}
 .opts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
 @media(max-width:520px){.opts{grid-template-columns:1fr}}
-.opt{font:800 18px Nunito,sans-serif;color:#fff;text-align:left;background:var(--panel2);border:3px solid transparent;border-radius:16px;padding:16px;cursor:pointer;min-height:64px}
+.opt{display:flex;align-items:center;font:800 18px Nunito,sans-serif;color:#fff;text-align:left;background:var(--panel2);border:3px solid transparent;border-radius:16px;padding:16px;cursor:pointer;min-height:64px}
 .opt:disabled{cursor:default}
 .opt.sel{border-color:var(--yellow)}
 .opt.ok{background:var(--green);color:#06260f}
@@ -89,6 +89,13 @@ select{font:800 16px Nunito,sans-serif;padding:10px;border-radius:10px;backgroun
 .sm .row{margin-top:8px}
 .chip.streamtoggle{font-size:14px;padding:6px 12px}
 body.picker h1.logo{display:none}
+.kb{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;margin-right:12px;border-radius:8px;background:rgba(255,255,255,.16);font:400 15px "Lilita One",Impact,sans-serif}
+.opt.ok .kb{background:rgba(0,0,0,.18)}
+.opt:disabled .kb{opacity:.6}
+.kbhint{margin:10px 0 0}
+@media(hover:none){.kbhint{display:none}}
+.kick{flex:none;background:transparent;border:0;color:var(--muted);cursor:pointer;font:800 14px Nunito,sans-serif;padding:3px 7px;border-radius:8px}
+.kick:hover,.kick:focus-visible{color:var(--red);background:rgba(255,82,82,.16)}
 #qcard{position:relative}
 .ghead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .gl{flex:1;text-align:center;min-width:140px;font:400 34px/1 "Lilita One",Impact,sans-serif;color:var(--yellow);text-shadow:3px 3px 0 var(--pink);background:transparent}
@@ -130,6 +137,11 @@ body.picker .sndwrap{display:none}
     <div class="top"><h2 id="hello"></h2><span><a class="ghost" href="index.html">Outros jogos</a> <button class="ghost" id="b-out">Sair</button></span></div>
     <p>Crie uma sala ou entre com o código de quem está organizando.</p>
     <div class="row"><button class="btn" id="b-new">Criar sala</button><button class="btn alt" id="b-rank">Ranking por tema</button><button class="chip streamtoggle" type="button" aria-pressed="false">🎥 Modo streamer</button></div>
+  </div>
+  <div class="card" id="daily-card">
+    <h3>📅 Desafio diário</h3>
+    <p class="note" id="daily-note">Carregando…</p>
+    <button class="btn" id="b-daily" type="button" hidden>Jogar agora</button>
   </div>
   <div class="card">
     <h3>Salas públicas</h3>
@@ -176,6 +188,7 @@ body.picker .sndwrap{display:none}
       <div class="q" id="g-q"></div>
       <div class="sm" id="sm" hidden>🎥 <b>Modo streamer:</b> suas respostas ficam numa janela separada, para não aparecerem na sua transmissão.<div class="row"><button class="ghost" id="b-picker" type="button">Abrir janela de respostas</button><button class="ghost" id="b-here" type="button">Responder aqui mesmo</button></div></div>
       <div class="opts" id="g-opts"></div>
+      <p class="note kbhint" id="kbhint">Atalhos: teclas 1, 2, 3 e 4 (ou A, B, C e D) para responder</p>
       <div class="gfoot"><div class="fb" id="g-fb" aria-live="polite"></div><span class="big" id="g-pts" style="color:var(--yellow);font-size:26px"></span></div>
       <div class="ov" id="pause-ov" hidden><span>⏸ Jogo pausado</span><span class="note" style="font:600 15px Nunito,sans-serif">O admin pausou a partida.</span></div>
     </div>
@@ -193,6 +206,20 @@ body.picker .sndwrap{display:none}
   <div class="card"><h2>Ranking por tema</h2><div class="tabs" id="r-tabs"></div><div id="r-theme"></div>
   <button class="btn alt full" id="b-back" style="margin-top:12px">Voltar</button></div>
 </section>
+<section id="s-daily" class="screen"><div class="card">
+  <div class="ghead"><span class="theme" id="d-theme"></span><span class="note" id="d-count"></span><span class="gl" aria-hidden="true">Desafio diário</span><span class="big" id="d-pts" style="color:var(--yellow);font-size:26px"></span></div>
+  <div class="timer"><i id="d-bar"></i></div>
+  <div class="q" id="d-q"></div>
+  <div class="opts" id="d-opts"></div>
+  <p class="note kbhint">Atalhos: teclas 1, 2, 3 e 4 (ou A, B, C e D) para responder</p>
+  <div class="gfoot"><div class="fb" id="d-fb" aria-live="polite"></div><button class="ghost" id="d-quit" type="button">Voltar ao início</button></div>
+  <p class="note">O tempo de cada pergunta continua correndo mesmo se você sair.</p>
+</div></section>
+<section id="s-dres" class="screen">
+  <div class="card"><h2 id="dr-title">Desafio diário</h2><div id="dr-sum"></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="dr-share" type="button">Copiar resultado</button><button class="btn alt" id="dr-back" type="button">Voltar</button></div></div>
+  <div class="card"><h3>Ranking do dia</h3><div id="dr-board"></div></div>
+</section>
 <section id="s-picker" class="screen"><div class="card"><h2>🎥 Respostas</h2><p class="note">Janela do modo streamer. Não inclua esta janela na sua transmissão.</p>
   <div id="pk-wait" class="note">Aguardando a próxima pergunta…</div>
   <div id="pk-box" hidden><div class="top"><span class="theme" id="pk-theme"></span><span class="note" id="pk-count"></span></div><div class="timer"><i id="pk-bar"></i></div><div class="q" id="pk-q"></div><div class="opts" id="pk-opts"></div><div class="fb" id="pk-fb"></div></div></div></section>
@@ -205,14 +232,14 @@ var SB_URL="https://mqnwstppbzrdjygvgzbj.supabase.co",SB_KEY="sb_publishable_wIJ
 var PICKER=new URLSearchParams(location.search).has("picker");
 var sb=PICKER?null:window.supabase.createClient(SB_URL,SB_KEY);
 var THEMES=["Geografia","História","Música","Games","Animes","Futebol","Basquete","Arte","Tecnologia","Cinema e TV","Reino Animal","Cultura POP","Comidas e Bebidas","Super-heróis","Espaço","Mitologia","Literatura","Fórmula 1 e automobilismo","Memes e Internet"];
-var ERR={escolha_um_tema:"Escolha pelo menos um tema.",sem_perguntas:"Não há perguntas para esses temas.",somente_admin:"Só o admin pode fazer isso.",partida_em_andamento:"A partida já está em andamento.",sala_nao_encontrada:"Sala não encontrada. Confira o código.",tempo_esgotado:"Tempo esgotado.",fora_da_pergunta:"Não há pergunta aberta agora.",login_necessario:"Entre com a Twitch primeiro.",jogo_pausado:"O jogo está pausado pelo admin.",cedo_demais:"Aguarde um instante."};
+var ERR={escolha_um_tema:"Escolha pelo menos um tema.",sem_perguntas:"Não há perguntas para esses temas.",somente_admin:"Só o admin pode fazer isso.",partida_em_andamento:"A partida já está em andamento.",sala_nao_encontrada:"Sala não encontrada. Confira o código.",tempo_esgotado:"Tempo esgotado.",fora_da_pergunta:"Não há pergunta aberta agora.",login_necessario:"Entre com a Twitch primeiro.",sem_pergunta_pendente:"Não há pergunta pendente no desafio.",jogo_pausado:"O jogo está pausado pelo admin.",expulso:"Você foi removido desta sala pelo admin e não pode voltar.",nao_pode_expulsar_a_si:"Você não pode expulsar a si mesmo.",cedo_demais:"Aguarde um instante."};
 var clockOff=0,me=null,R=null,players=[],answered=new Map(),chan=null,tick=null,chatIds={},S={},els={},prevRank={},prevScore={},plT=null,toastT=null;
 
 function $(i){return document.getElementById(i)}
 function esc(t){var d=document.createElement("div");d.textContent=t==null?"":String(t);return d.innerHTML}
 function errMsg(e){var m=(e&&e.message)||"";for(var k in ERR)if(m.indexOf(k)>-1)return ERR[k];return "Algo deu errado. Tente de novo."}
 function toast(t){var e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(toastT);toastT=setTimeout(function(){e.style.display="none"},3500)}
-function show(id){document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("on")});$("s-"+id).classList.add("on");$("main").classList.toggle("wide",id==="game");window.scrollTo(0,0);if(id==="home"&&me&&!PICKER)loadPublic()}
+function show(id){document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("on")});$("s-"+id).classList.add("on");$("main").classList.toggle("wide",id==="game");window.scrollTo(0,0);if(id==="home"&&me&&!PICKER){loadPublic();loadDaily()}}
 function isHost(){return R&&me&&R.host_id===me.id}
 function canDrive(){return !!(R&&me&&(R.host_id===me.id||(R.is_public&&players.some(function(p){return p.user_id===me.id}))))}
 function myScore(){var p=players.filter(function(x){return x.user_id===me.id})[0];return p?p.score:0}
@@ -255,6 +282,8 @@ function exitRoom(){
   leaveRoom();show("home");pushPicker();
 }
 $("b-leave").onclick=exitRoom;
+$("plist").addEventListener("click",function(e){onKick(e)});
+$("lobby-pl").addEventListener("click",function(e){onKick(e)});
 $("b-exit").onclick=exitRoom;
 $("b-pause").onclick=function(){if(!R||!isHost())return;sb.rpc(R.paused?"qr_resume":"qr_pause",{p_room:R.id}).then(function(r){if(r.error)toast(errMsg(r.error))})};
 function enterRoom(id){
@@ -267,7 +296,7 @@ function enterRoom(id){
   });
 }
 function syncClock(){var t0=Date.now();return sb.rpc("qr_now").then(function(r){if(!r.error&&r.data)clockOff=new Date(r.data).getTime()-(t0+Date.now())/2})}
-function loadPlayers(){return sb.from("qr_players").select("user_id,display_name,avatar_url,score").eq("room_id",R.id).order("joined_at").then(function(r){if(!r.error){players=r.data;afterPlayers()}})}
+function loadPlayers(){return sb.from("qr_players").select("user_id,display_name,avatar_url,score").eq("room_id",R.id).order("joined_at").then(function(r){if(!r.error){players=r.data;afterPlayers();checkKicked()}})}
 function loadAnswered(){return sb.from("qr_answered").select("user_id,elapsed_ms").eq("room_id",R.id).eq("round",R.round).then(function(r){if(!r.error)answered=new Map(r.data.map(function(x){return [x.user_id,x.elapsed_ms]}))})}
 function loadChat(){return sb.from("qr_chat").select("id,user_id,author,body").eq("room_id",R.id).order("id",{ascending:false}).limit(50).then(function(r){if(!r.error)r.data.reverse().forEach(addChat)})}
 function subscribe(id){
@@ -296,7 +325,7 @@ function afterPlayers(){
 
 /* ---------- lobby ---------- */
 function showLobby(){S.key="";S.round=-1;S.nextFor=-1;S.revFor=-1;S.endPlayed=false;show("lobby");pushPicker();$("code").textContent=R.code;renderLobbyPlayers();renderCfg()}
-function renderLobbyPlayers(){$("lobby-pl").innerHTML=players.map(function(p){return '<div class="pl'+(p.user_id===me.id?' me':'')+'"><span>'+esc(p.display_name)+(p.user_id===R.host_id?' 👑':'')+'</span></div>'}).join("")}
+function renderLobbyPlayers(){$("lobby-pl").innerHTML=players.map(function(p){return '<div class="pl'+(p.user_id===me.id?' me':'')+'"><span>'+esc(p.display_name)+(p.user_id===R.host_id?' 👑':'')+'</span>'+kickBtn(p)+'</div>'}).join("")}
 function renderCfg(){
   var pub=!!R.is_public,host=isHost()&&!pub;$("cfg").hidden=!host;$("cfg-ro").hidden=host;$("ro-title").textContent=pub?(R.title||"Sala pública"):"Partida";$("ro-wait").hidden=pub;$("b-start-pub").hidden=!pub;
   if(host){
@@ -343,7 +372,7 @@ function beginQuestion(){
   $("g-theme").textContent=q.theme;var d=q.difficulty||1;$("g-count").textContent=R.round+" de "+R.question_ids.length+" · "+"★".repeat(d)+"☆".repeat(5-d);$("g-count").title="Nível "+d+" de 5";$("g-pts").textContent=myScore()+" pts";
   $("g-q").textContent=q.body;$("g-fb").textContent="";$("g-opts").innerHTML="";
   var done=answered.has(me.id);
-  q.options.forEach(function(o,i){var b=document.createElement("button");b.className="opt";b.textContent=o;b.disabled=done||streamActive()||!!R.paused;b.onclick=function(){pick(i,b)};$("g-opts").appendChild(b)});
+  q.options.forEach(function(o,i){var b=document.createElement("button");b.className="opt";optLabel(b,o,i);b.disabled=done||streamActive()||!!R.paused;b.onclick=function(){pick(i,b)};$("g-opts").appendChild(b)});
   if(done)$("g-fb").textContent="Resposta enviada. Aguardando o tempo acabar.";
   if(R.paused)$("bar").style.transform="scaleX("+((R.paused_ms||0)/(R.answer_secs*1000))+")";else startTick();
   sfx("start");updateStreamUI();pushPicker();
@@ -381,6 +410,141 @@ function updateFeedback(){
   $("g-pts").textContent=myScore()+" pts";pushPicker();
 }
 
+function kickBtn(p){
+  if(!R||!me||!isHost()||R.is_public||p.user_id===me.id)return"";
+  return '<button class="kick" type="button" data-uid="'+esc(p.user_id)+'" data-nm="'+esc(p.display_name)+'" aria-label="Expulsar '+esc(p.display_name)+'" title="Expulsar '+esc(p.display_name)+'">✕</button>';
+}
+function onKick(e){
+  var b=e.target.closest&&e.target.closest(".kick");
+  if(!b||!R||!isHost())return;
+  var nm=b.dataset.nm;
+  if(!confirm("Expulsar "+nm+" da sala? Essa pessoa não poderá voltar."))return;
+  sb.rpc("qr_kick_player",{p_room:R.id,p_user:b.dataset.uid}).then(function(r){
+    if(r.error){toast(errMsg(r.error));return}
+    toast(nm+" foi removido da sala.");loadPlayers();
+  });
+}
+function checkKicked(){if(R&&me&&!players.some(function(p){return p.user_id===me.id}))handleKicked()}
+function handleKicked(){
+  if(!R)return;
+  if(R.is_public){
+    sb.rpc("qr_join_room",{p_code:R.code}).then(function(r){
+      if(r.error&&/expulso/.test(r.error.message))kickedOut();else if(!r.error)loadPlayers();
+    });
+    return;
+  }
+  kickedOut();
+}
+function kickedOut(){leaveRoom();show("home");pushPicker();toast("Você foi removido da sala pelo admin.")}
+/* ---------- desafio diário ---------- */
+var D={q:null,deadline:0,tick:null,locked:false,secs:20,last:0},DSHARE="";
+function fmtDay(d){var p=String(d).split("-");return p[2]+"/"+p[1]}
+function loadDaily(){
+  if(!sb||!me)return;
+  sb.rpc("qr_daily_state").then(function(r){
+    var n=$("daily-note"),b=$("b-daily");
+    if(r.error||!r.data){n.textContent="Não foi possível carregar o desafio agora.";b.hidden=true;return}
+    var s=r.data;b.hidden=false;b.disabled=false;
+    if(s.finished){n.textContent="Hoje você fez "+s.score+" pontos ("+s.correct+" de 5 acertos) e ficou em "+s.rank+"º de "+s.players+(s.players===1?" jogador.":" jogadores.")+" Volte amanhã!";b.textContent="Ver resultado"}
+    else if(s.pending){n.textContent="A pergunta "+s.pos+" de 5 já está aberta, e o tempo continua correndo!";b.textContent="Continuar"}
+    else if(s.started){n.textContent="Você já respondeu "+(s.pos-1)+" de 5. Faltam "+(6-s.pos)+".";b.textContent="Continuar"}
+    else{n.textContent="5 perguntas, as mesmas para todo mundo, uma vez por dia."+(s.streak?" Sequência atual: "+s.streak+(s.streak===1?" dia.":" dias."):"");b.textContent="Jogar agora"}
+  });
+}
+function dailyNext(){
+  sb.rpc("qr_daily_state",{p_start:true}).then(function(r){
+    if(r.error||!r.data){toast("Não foi possível abrir o desafio agora.");show("home");return}
+    var s=r.data;if(s.finished)showDailyResult(s);else renderDailyQ(s);
+  });
+}
+function renderDailyQ(s){
+  show("daily");clearInterval(D.tick);
+  D.q=s.question;D.locked=false;D.secs=s.secs;D.last=0;
+  var d=s.question.difficulty||1;
+  $("d-theme").textContent=s.question.theme;
+  $("d-count").textContent="Pergunta "+s.pos+" de "+s.total+" · "+"★".repeat(d)+"☆".repeat(5-d);
+  $("d-pts").textContent=s.score+" pts";$("d-q").textContent=s.question.body;$("d-fb").textContent="";$("d-opts").innerHTML="";
+  s.question.options.forEach(function(o,i){var b=document.createElement("button");b.className="opt";optLabel(b,o,i);b.onclick=function(){dailyPick(i,b)};$("d-opts").appendChild(b)});
+  D.deadline=Date.now()+(s.secs*1000-s.elapsed_ms);
+  sfx("start");
+  D.tick=setInterval(function(){
+    var left=D.deadline-Date.now();
+    $("d-bar").style.transform="scaleX("+Math.max(0,left/(D.secs*1000))+")";
+    var sec=Math.ceil(left/1000);if(sec>0&&sec<=3&&sec!==D.last){D.last=sec;sfx("tick")}
+    if(left<=0){clearInterval(D.tick);dailyTimeout(0)}
+  },100);
+}
+function dailyPick(i,btn){
+  if(D.locked||!D.q)return;
+  D.locked=true;clearInterval(D.tick);
+  document.querySelectorAll("#d-opts .opt").forEach(function(b){b.disabled=true});btn.classList.add("sel");
+  sb.rpc("qr_daily_answer",{p_choice:i}).then(function(r){
+    if(r.error){toast(errMsg(r.error));D.locked=false;document.querySelectorAll("#d-opts .opt").forEach(function(b){b.disabled=false});return}
+    dailyFeedback(r.data,i);
+  });
+}
+function dailyTimeout(n){
+  if(D.locked)return;D.locked=true;
+  sb.rpc("qr_daily_answer",{p_choice:-1}).then(function(r){
+    if(r.error&&/ainda_no_prazo/.test(r.error.message)&&n<6){D.locked=false;setTimeout(function(){dailyTimeout(n+1)},500);return}
+    if(r.error){toast(errMsg(r.error));D.locked=false;return}
+    dailyFeedback(r.data,-1);
+  });
+}
+function dailyFeedback(res,chosen){
+  document.querySelectorAll("#d-opts .opt").forEach(function(b,i){b.disabled=true;b.classList.remove("sel");if(i===res.correct_index)b.classList.add("ok");else if(i===chosen)b.classList.add("no")});
+  $("d-pts").textContent=res.score+" pts";
+  $("d-fb").textContent=res.timeout?"Tempo esgotado. +0 pontos":(res.correct?"Acertou! +"+res.points+" pontos":"Errou. +0 pontos");
+  sfx(res.correct?"ok":"no");D.q=null;
+  setTimeout(dailyNext,res.done?1800:2400);
+}
+function showDailyResult(s){
+  show("dres");clearInterval(D.tick);D.q=null;
+  var emo=s.results.map(function(c){return c?"🟩":"🟥"}).join("");
+  $("dr-title").textContent="Desafio diário de "+fmtDay(s.day);
+  $("dr-sum").innerHTML='<p class="big" style="font-size:44px;color:var(--yellow);margin:6px 0">'+s.score+' pts</p><p style="font-size:26px;margin:6px 0" aria-label="Acertos e erros">'+emo+'</p><p class="note">'+s.correct+' de 5 acertos · '+fmtT(s.total_ms)+' no total · '+s.rank+'º de '+s.players+' hoje'+(s.streak>1?' · sequência de '+s.streak+' dias':'')+'</p>';
+  DSHARE="QuizRush — Desafio diário "+fmtDay(s.day)+"\n"+emo+" "+s.score+" pts ("+s.correct+"/5)";
+  sb.rpc("qr_daily_board").then(function(r){
+    var box=$("dr-board");
+    if(r.error||!r.data||!r.data.length){box.innerHTML='<p class="note">Ninguém terminou o desafio de hoje ainda.</p>';return}
+    box.innerHTML=r.data.map(function(x){return '<div class="pl'+(x.eu?' me':'')+'"><span>'+x.posicao+'º '+esc(x.nome)+' <small class="note">'+x.acertos+'/5 · '+fmtT(x.tempo_ms)+'</small></span><span class="pts">'+x.pontos+'</span></div>'}).join("");
+  });
+}
+$("b-daily").onclick=dailyNext;
+$("d-quit").onclick=function(){clearInterval(D.tick);show("home")};
+$("dr-back").onclick=function(){show("home")};
+$("dr-share").onclick=function(){
+  var t=DSHARE;
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast("Resultado copiado!")},function(){toast("Não foi possível copiar.")})}
+  else toast("Seu navegador não permite copiar automaticamente.");
+};
+
+function optLabel(b,texto,i){
+  var kb=document.createElement("span");kb.className="kb";kb.setAttribute("aria-hidden","true");kb.textContent=String(i+1);
+  b.appendChild(kb);b.appendChild(document.createTextNode(texto));
+  b.setAttribute("aria-keyshortcuts",String(i+1)+" "+"ABCD".charAt(i));
+}
+document.addEventListener("keydown",function(e){
+  if(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||e.repeat)return;
+  var t=e.target,tag=t&&t.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(t&&t.isContentEditable))return;
+  var k=e.key,idx=-1;
+  if(k>="1"&&k<="4")idx=+k-1;else if(/^[a-dA-D]$/.test(k))idx=k.toLowerCase().charCodeAt(0)-97;
+  if(idx<0)return;
+  if(PICKER){
+    if(pkS&&pkS.phase==="question"&&pkS.choice===null&&pkS.options&&idx<pkS.options.length&&bc){e.preventDefault();bc.postMessage({t:"pick",round:pkS.round,i:idx});pkS.choice=idx;pkRender()}
+    return;
+  }
+  if($("s-daily").classList.contains("on")){
+    var db=$("d-opts").children[idx];
+    if(D.q&&!D.locked&&db&&!db.disabled){e.preventDefault();dailyPick(idx,db)}
+    return;
+  }
+  if(!R||!$("s-game").classList.contains("on")||R.phase!=="question"||R.paused||S.myChoice!==null||streamActive())return;
+  var btn=$("g-opts").children[idx];
+  if(!btn||btn.disabled)return;
+  e.preventDefault();pick(idx,btn);
+});
 function fmtT(ms){return ms==null?"":(ms/1000).toFixed(3).replace(".",",")+" s"}
 function startTick(){
   clearInterval(tick);
@@ -431,19 +595,20 @@ function loadPublic(){
 }
 if(!PICKER){
   setInterval(function(){if(me&&$("s-home").classList.contains("on"))loadPublic()},6000);
-  setInterval(function(){if(R)sb.rpc("qr_ping",{p_room:R.id})},20000);
+  setInterval(function(){if(R)sb.rpc("qr_ping",{p_room:R.id}).then(function(r){if(!r.error&&r.data===false)handleKicked()})},20000);
 }
 
 /* ---------- placar ---------- */
 function renderBoard(){
   var list=players.slice().sort(function(a,b){return b.score-a.score}),box=$("plist"),old={},rm=matchMedia("(prefers-reduced-motion:reduce)").matches;
+  Object.keys(els).forEach(function(k){if(!list.some(function(p){return p.user_id===k})){els[k].remove();delete els[k];delete prevRank[k];delete prevScore[k]}});
   var changed=list.some(function(p){return prevScore[p.user_id]!==undefined&&prevScore[p.user_id]!==p.score});
   list.forEach(function(p){if(els[p.user_id])old[p.user_id]=els[p.user_id].getBoundingClientRect().top});
   list.forEach(function(p,i){
     var e=els[p.user_id]||(els[p.user_id]=document.createElement("div")),done=R&&(R.phase==="question"||R.phase==="reveal")&&answered.has(p.user_id);
     e.className="pside"+(p.user_id===me.id?" me":"");
     var av=p.avatar_url?'<img class="ini" src="'+esc(p.avatar_url)+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<span class="ini">'+esc((p.display_name||"?")[0].toUpperCase())+'</span>';
-    e.innerHTML='<span class="rk">'+(i+1)+'º</span>'+av+'<span class="nmcol"><span class="nmw"><span class="nm">'+esc(p.display_name)+'</span>'+(i===0&&p.score>0?'<span class="crown" title="Líder">👑</span>':'')+'</span>'+(done?'<span class="tm" title="Respondeu em '+fmtT(answered.get(p.user_id))+'">✓ '+fmtT(answered.get(p.user_id))+'</span>':'')+'</span><span class="sc">'+p.score+'</span>';
+    e.innerHTML='<span class="rk">'+(i+1)+'º</span>'+av+'<span class="nmcol"><span class="nmw"><span class="nm">'+esc(p.display_name)+'</span>'+(i===0&&p.score>0?'<span class="crown" title="Líder">👑</span>':'')+'</span>'+(done?'<span class="tm" title="Respondeu em '+fmtT(answered.get(p.user_id))+'">✓ '+fmtT(answered.get(p.user_id))+'</span>':'')+'</span><span class="sc">'+p.score+'</span>'+kickBtn(p);
     box.appendChild(e);
   });
   list.forEach(function(p,i){
@@ -553,7 +718,7 @@ function pkRender(){
   $("pk-theme").textContent=s.theme;$("pk-count").textContent=s.round+" de "+s.total;$("pk-q").textContent=s.body;
   var box=$("pk-opts");box.innerHTML="";
   s.options.forEach(function(o,i){
-    var b=document.createElement("button");b.className="opt";b.textContent=o;
+    var b=document.createElement("button");b.className="opt";optLabel(b,o,i);
     b.disabled=s.phase!=="question"||s.choice!==null;
     if(s.phase==="reveal"){if(i===s.correct)b.classList.add("ok");else if(i===s.choice)b.classList.add("no")}
     else if(i===s.choice)b.classList.add("sel");
