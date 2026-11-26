@@ -592,6 +592,8 @@ Object.assign(I18N.en,{'GIFs':'GIFs','Buscar no GIPHY':'Search GIPHY','Buscar':'
 Object.assign(I18N.es,{'GIFs':'GIFs','Buscar no GIPHY':'Buscar en GIPHY','Buscar':'Buscar','Em alta':'En tendencia','😂 Risadas':'😂 Risas','👏 Aplausos':'👏 Aplausos','🎉 Comemorar':'🎉 Celebrar','😮 Surpresa':'😮 Sorpresa','🎵 Música':'🎵 Música','Fechar':'Cerrar','GIF inválido.':'GIF no válido.'});
 Object.assign(I18N.en,{'🔊 Prévia do YouTube. Se não iniciar, toque no player.':'YouTube preview. If it does not start, click the player.'});
 Object.assign(I18N.es,{'🔊 Prévia do YouTube. Se não iniciar, toque no player.':'Vista previa de YouTube. Si no inicia, toca el reproductor.'});
+Object.assign(I18N.en,{'Muitos envios ao mesmo tempo. Tente de novo em instantes.':'Too many submissions at once. Try again in a moment.','O servidor demorou para responder. Confira se sua música foi enviada ou tente de novo.':'The server took too long to answer. Check whether your song was sent, or try again.'});
+Object.assign(I18N.es,{'Muitos envios ao mesmo tempo. Tente de novo em instantes.':'Demasiados envíos a la vez. Inténtalo de nuevo en un momento.','O servidor demorou para responder. Confira se sua música foi enviada ou tente de novo.':'El servidor tardó en responder. Comprueba si se envió tu canción o inténtalo de nuevo.'});
 // tr("texto em português", {variaveis}) -> texto no idioma atual (se faltar a tradução, usa o português)
 function tr(pt,v){
   let x=(LANG!=='pt'&&I18N[LANG]&&I18N[LANG][pt])||pt;
@@ -617,7 +619,7 @@ function applyStatic(){
   }));
   document.documentElement.lang=LOC[LANG];document.title=tr('SongRush – Online');
 }
-const ERR={room_not_found:'Sala não encontrada.',game_started:'Essa partida já começou.',room_full:'Sala cheia (máx. 50).',time_over:'Tempo esgotado.',not_input_phase:'Não é hora de enviar.',own_song:'Você não vota na sua música.',catalog_unavailable:'O serviço de busca de músicas está indisponível. Tente de novo.',not_authenticated:'Entre com a Twitch para enviar.',no_word:'Esta rodada não tem palavra. Tente de novo.',submit_failed:'Não foi possível enviar. Tente de novo.',paused:'A partida está pausada.',not_host:'Só o admin da sala pode fazer isso.',cannot_kick_self:'Você não pode remover a si mesmo.',not_member:'Essa pessoa não está mais na sala.',joins_next_turn:'Você entrou no meio do turno e só joga a partir do próximo.',word_exists:'Essa palavra já foi sugerida.',bad_word:'Use uma palavra só, só com letras (2 a 24).',too_many_pending:'Você já tem 5 sugestões aguardando aprovação.',not_admin:'Só o moderador pode fazer isso.',not_found:'Sugestão não encontrada ou já avaliada.',already_started:'A partida já começou.',bad_turns:'Escolha de 1 a 20 turnos.',chat_paused:'O chat fica pausado enquanto as músicas são escolhidas.',slow_down:'Devagar! Aguarde alguns segundos.',bad_message:'Mensagem inválida.',word_not_played:'Só dá para avaliar palavras que você já jogou.',already_ready:'Você já respondeu neste turno.',cannot_change:'Todos já responderam — não dá mais para alterar.'};
+const ERR={busy:'Muitos envios ao mesmo tempo. Tente de novo em instantes.',submit_timeout:'O servidor demorou para responder. Confira se sua música foi enviada ou tente de novo.',room_not_found:'Sala não encontrada.',game_started:'Essa partida já começou.',room_full:'Sala cheia (máx. 50).',time_over:'Tempo esgotado.',not_input_phase:'Não é hora de enviar.',own_song:'Você não vota na sua música.',catalog_unavailable:'O serviço de busca de músicas está indisponível. Tente de novo.',not_authenticated:'Entre com a Twitch para enviar.',no_word:'Esta rodada não tem palavra. Tente de novo.',submit_failed:'Não foi possível enviar. Tente de novo.',paused:'A partida está pausada.',not_host:'Só o admin da sala pode fazer isso.',cannot_kick_self:'Você não pode remover a si mesmo.',not_member:'Essa pessoa não está mais na sala.',joins_next_turn:'Você entrou no meio do turno e só joga a partir do próximo.',word_exists:'Essa palavra já foi sugerida.',bad_word:'Use uma palavra só, só com letras (2 a 24).',too_many_pending:'Você já tem 5 sugestões aguardando aprovação.',not_admin:'Só o moderador pode fazer isso.',not_found:'Sugestão não encontrada ou já avaliada.',already_started:'A partida já começou.',bad_turns:'Escolha de 1 a 20 turnos.',chat_paused:'O chat fica pausado enquanto as músicas são escolhidas.',slow_down:'Devagar! Aguarde alguns segundos.',bad_message:'Mensagem inválida.',word_not_played:'Só dá para avaliar palavras que você já jogou.',already_ready:'Você já respondeu neste turno.',cannot_change:'Todos já responderam — não dá mais para alterar.'};
 const errMsg=e=>{const k=(e.message||'').trim();return ERR[k]?tr(ERR[k]):e.message};
 
 /* ---------- letra / música ---------- */
@@ -634,10 +636,21 @@ function hitOf(t){const m=norm(t).match(rx());return m?t.slice(m.index+m[1].leng
 function hl(t){const m=norm(t).match(rx());if(!m)return esc(t);const i=m.index+m[1].length,L=m[0].length-m[1].length;return esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+L))+'</mark>'+esc(t.slice(i+L))}
 function jsonp(url){return new Promise((res,rej)=>{
   const cb='cb'+Math.random().toString(36).slice(2),s=document.createElement('script');
-  const to=setTimeout(()=>{rej(new Error(tr('tempo esgotado')));s.remove()},10000);
+  // se o script chegar depois do timeout/erro, o callback vira um no-op que se apaga (sem ReferenceError nem vazamento)
+  const drop=()=>{s.remove();window[cb]=()=>{delete window[cb]}};
+  const to=setTimeout(()=>{rej(new Error(tr('tempo esgotado')));drop()},10000);
   window[cb]=d=>{clearTimeout(to);res(d);s.remove();delete window[cb]};
-  s.onerror=()=>{clearTimeout(to);rej(new Error(tr('falha de conexão')));s.remove()};
+  s.onerror=()=>{clearTimeout(to);rej(new Error(tr('falha de conexão')));drop()};
   s.src=url+'&callback='+cb;document.head.appendChild(s)})}
+// cache por URL de busca (10 min): repetir a mesma busca não refaz o pedido; falhas não ficam no cache
+const jpCache=new Map();
+function jsonpC(url){
+  const c=jpCache.get(url);if(c&&Date.now()-c.t<600000)return c.p;
+  const p=jsonp(url);jpCache.set(url,{p,t:Date.now()});
+  if(jpCache.size>200)jpCache.delete(jpCache.keys().next().value);
+  p.catch(()=>{if(jpCache.get(url)&&jpCache.get(url).p===p)jpCache.delete(url)});
+  return p;
+}
 const flat=s=>norm(s).replace(/[^a-z0-9]+/g,' ').trim();   // sem acento, sem maiúsculas, sem pontuação
 /*FUZZY-START*/
 // distância de edição (letras trocadas, faltando ou sobrando)
@@ -714,13 +727,17 @@ async function findSong(artist,track){
   if(!compact(track)||!compact(artist))return null;
   const it=x=>({trackName:x.trackName,artistName:x.artistName,art:(x.artworkUrl100||'').replace('100x100','300x300'),previewUrl:x.previewUrl});
   const dz=x=>({trackName:x.title,artistName:x.artist&&x.artist.name,art:x.album&&x.album.cover_big,previewUrl:x.preview});
-  const I=t=>jsonp('https://itunes.apple.com/search?entity=song&limit=50&country=BR&term='+encodeURIComponent(t)).then(d=>d.results.map(it));
-  const D=t=>jsonp('https://api.deezer.com/search?limit=40&output=jsonp&q='+encodeURIComponent(t)).then(d=>d.data.map(dz));
-  const IA=t=>jsonp('https://itunes.apple.com/search?entity=musicArtist&limit=15&country=BR&term='+encodeURIComponent(t)).then(d=>d.results.map(x=>x.artistName).filter(Boolean));
-  const DA=t=>jsonp('https://api.deezer.com/search/artist?limit=15&output=jsonp&q='+encodeURIComponent(t)).then(d=>d.data.map(x=>x.name).filter(Boolean));
-  const songQs=[I(artist+' '+track),I(flat(artist)+' '+flat(track)),I(track),I(artist),D(artist+' '+track),D(artist)];
-  const res=await Promise.allSettled([...songQs,IA(artist),DA(artist)]);
-  if(res.every(r=>r.status==='rejected'))throw new Error(tr('sem conexão com os catálogos'));
+  const I=t=>jsonpC('https://itunes.apple.com/search?entity=song&limit=50&country=BR&term='+encodeURIComponent(t)).then(d=>d.results.map(it));
+  const D=t=>jsonpC('https://api.deezer.com/search?limit=40&output=jsonp&q='+encodeURIComponent(t)).then(d=>d.data.map(dz));
+  const IA=t=>jsonpC('https://itunes.apple.com/search?entity=musicArtist&limit=15&country=BR&term='+encodeURIComponent(t)).then(d=>d.results.map(x=>x.artistName).filter(Boolean));
+  const DA=t=>jsonpC('https://api.deezer.com/search/artist?limit=15&output=jsonp&q='+encodeURIComponent(t)).then(d=>d.data.map(x=>x.name).filter(Boolean));
+  const nSong=6;   // as 6 primeiras consultas são de músicas; as 2 últimas, de artistas
+  const mk=()=>[I(artist+' '+track),I(flat(artist)+' '+flat(track)),I(track),I(artist),D(artist+' '+track),D(artist),IA(artist),DA(artist)];
+  // 1º passo: só a consulta principal. Se ela já traz a faixa exata (0 erros, não é versão) na 1ª fonte, nenhuma outra consulta
+  // poderia vencer (a ordem do catálogo desempata), então as outras 7 nem são enviadas
+  const q0=I(artist+' '+track);
+  const first=(await Promise.allSettled([q0]))[0];
+  let res;
   const seen=new Set(),cands=[],artists=new Set();
   const add=(list,si)=>list.forEach((x,i)=>{
     if(!x.previewUrl||!x.trackName||!x.artistName)return;
@@ -730,11 +747,15 @@ async function findSong(artist,track){
     const c=cost(track,artist,x);if(!c)return;
     seen.add(k);cands.push({x,c,o:si*100+i});
   });
-  res.forEach((r,si)=>{if(r.status!=='fulfilled')return;if(si<songQs.length)add(r.value,si);else r.value.forEach(n=>artists.add(n))});
+  const done=r=>r.value.some(x=>{const c=x.previewUrl&&x.trackName&&x.artistName&&cost(track,artist,x);return c&&c.dt+c.da===0&&c.exact&&!c.ver});
+  if(first.status==='fulfilled'&&done(first)){res=[first]}
+  else{const q=mk();q[0]=q0;res=[first,...await Promise.allSettled(q.slice(1))]}   // q0 já está no cache: não repete o pedido
+  if(res.every(r=>r.status==='rejected'))throw new Error(tr('sem conexão com os catálogos'));
+  res.forEach((r,si)=>{if(r.status!=='fulfilled')return;if(si<nSong)add(r.value,si);else r.value.forEach(n=>artists.add(n))});
   const best=()=>cands.length?Math.min(...cands.map(c=>c.c.dt+c.c.da)):Infinity;
   // 2ª rodada: se o catálogo não achou (nome com erro de digitação), busca pelo nome OFICIAL do artista que mais se aproxima do digitado
   if(best()>0){
-    const names=[...artists].map(n=>({n,d:artistDist(artist,n)})).filter(o=>o.d!==null).sort((a,b)=>a.d-b.d).slice(0,2).map(o=>o.n);
+    const names=[...artists].map(n=>({n,d:artistDist(artist,n)})).filter(o=>o.d!==null).sort((a,b)=>a.d-b.d).filter((o,_,a)=>o.d===a[0].d).slice(0,2).map(o=>o.n);   // só os empatados no melhor
     if(names.length){
       const r2=await Promise.allSettled(names.flatMap(n=>[I(n+' '+track),I(n),D(n+' '+track),D(n)]));
       r2.forEach((r,si)=>{if(r.status==='fulfilled')add(r.value,100+si)});
@@ -749,15 +770,32 @@ async function findSong(artist,track){
   return{key:norm(clean(x.trackName))+'|'+norm(x.artistName),track:x.trackName,artist:x.artistName,art:x.art,preview:x.previewUrl};
 }
 
+// cache em memória (acertos e "não encontrado" por alguns minutos) + deduplicação de pedidos em andamento
+const lyrCache=new Map(),lyrInflight=new Map(),LYR_MISS_MS=5*60*1000,LYR_TIMEOUT_MS=8000;
+async function lrFetch(url){
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),LYR_TIMEOUT_MS);
+  try{const r=await fetch(url,{signal:ac.signal});return{r,j:r.ok?await r.json():null}}finally{clearTimeout(to)}
+}
 async function getLyrics(artist,track){
-  try{
-    const p=`artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(clean(track))}`;
-    let r=await fetch('https://lrclib.net/api/get?'+p);
-    if(r.ok){const j=await r.json();if(j.plainLyrics)return j.plainLyrics}
-    r=await fetch('https://lrclib.net/api/search?'+p);
-    if(r.ok){const j=await r.json();const h=j.find(x=>x.plainLyrics);if(h)return h.plainLyrics}
-  }catch(e){}
-  return null;
+  const key=(artist+'|'+clean(track)).toLowerCase(),c=lyrCache.get(key);
+  if(c&&(c.text||Date.now()-c.t<LYR_MISS_MS))return c.text;
+  if(lyrInflight.has(key))return lyrInflight.get(key);
+  const job=(async()=>{
+    let sure=true;   // só guarda "não encontrado" se os servidores responderam de fato (erro/timeout não entra no cache)
+    try{
+      const p=`artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(clean(track))}`;
+      let {r,j}=await lrFetch('https://lrclib.net/api/get?'+p);
+      if(r.ok){if(j.plainLyrics){lyrCache.set(key,{text:j.plainLyrics,t:Date.now()});return j.plainLyrics}}
+      else if(r.status!==404)sure=false;
+      ({r,j}=await lrFetch('https://lrclib.net/api/search?'+p));
+      if(r.ok){const h=j.find(x=>x.plainLyrics);if(h){lyrCache.set(key,{text:h.plainLyrics,t:Date.now()});return h.plainLyrics}}
+      else sure=false;
+    }catch(e){sure=false}
+    if(sure)lyrCache.set(key,{text:null,t:Date.now()});
+    return null;
+  })().finally(()=>lyrInflight.delete(key));
+  lyrInflight.set(key,job);
+  return job;
 }
 
 /* ---------- som ---------- */
@@ -791,7 +829,7 @@ function show(v){
   $('topnav').hidden=v==='room';
   document.querySelectorAll('.navb[data-v]').forEach(b=>{b.hidden=(!user&&b.dataset.v==='perfil')||(b.dataset.v==='admin'&&!IS_ADMIN);b.classList.toggle('on',v==='stats'&&b.dataset.v===statsTab)});
   clearInterval(publicRoomsTimer);publicRoomsTimer=null;
-  if(v==='home'&&user){loadPublicRooms();publicRoomsTimer=setInterval(()=>{if(user&&!ROOM_ID&&!$('v-home').hidden)loadPublicRooms()},20000)}
+  if(v==='home'&&user){loadPublicRooms();publicRoomsTimer=setInterval(()=>{if(user&&!ROOM_ID&&!$('v-home').hidden&&!document.hidden)loadPublicRooms()},20000)}
 }
 let statsTab='perfil';
 function openStats(tab){
@@ -1274,8 +1312,10 @@ function startPing(){
   go();pingT=setInterval(go,30000);
 }
 function stopPing(){clearInterval(pingT);pingT=null}
-async function loadRoomBadges(){const [vp,md]=await Promise.all([sb.from('pdv_vip').select('user_id,tier,expires_at'),sb.rpc('pdv_medal_tiers')]);if(vp&&vp.data)VIP=vipFromRows(vp.data);if(md&&md.data)MEDAL=Object.fromEntries(md.data.map(x=>[x.user_id,{tier:x.tier,count:Number(x.approved_count)}]));if(S.room)render()}
-function startRoomBadges(){stopRoomBadges();loadRoomBadges();roomBadgeT=setInterval(loadRoomBadges,60000)}
+// emblemas mudam raramente: busca a cada 3 min (não em aba oculta) e só redesenha a sala se algo mudou
+const BADGE_MS=180000;let badgeSig='',badgeAt=0;
+async function loadRoomBadges(){badgeAt=Date.now();const [vp,md]=await Promise.all([sb.from('pdv_vip').select('user_id,tier,expires_at'),sb.rpc('pdv_medal_tiers')]);const sig=JSON.stringify([vp&&vp.data,md&&md.data]);if(vp&&vp.data)VIP=vipFromRows(vp.data);if(md&&md.data)MEDAL=Object.fromEntries(md.data.map(x=>[x.user_id,{tier:x.tier,count:Number(x.approved_count)}]));if(sig!==badgeSig){badgeSig=sig;if(S.room)render()}}
+function startRoomBadges(){stopRoomBadges();badgeSig='';loadRoomBadges();roomBadgeT=setInterval(()=>{if(!document.hidden)loadRoomBadges()},BADGE_MS)}
 function stopRoomBadges(){clearInterval(roomBadgeT);roomBadgeT=null}
 function enterRoom(id){
   leaveRoom(true);ROOM_ID=id;S={room:null,players:[],ready:[],subs:[],votes:[],results:[]};
@@ -1284,17 +1324,21 @@ function enterRoom(id){
   show('room');
   startPing();
   startRoomBadges();
+  syncClock(true);
   chan=sb.channel('pdv-'+id);
-  ['pdv_players','pdv_submissions','pdv_ready','pdv_votes','pdv_results'].forEach(t=>chan.on('postgres_changes',{event:'*',schema:'public',table:t,filter:'room_id=eq.'+id},schedule));
-  chan.on('postgres_changes',{event:'*',schema:'public',table:'pdv_rooms',filter:'id=eq.'+id},schedule);
+  ['pdv_players','pdv_submissions','pdv_ready','pdv_votes','pdv_results'].forEach(t=>chan.on('postgres_changes',{event:'*',schema:'public',table:t,filter:'room_id=eq.'+id},()=>schedule(t)));
+  chan.on('postgres_changes',{event:'*',schema:'public',table:'pdv_rooms',filter:'id=eq.'+id},()=>schedule('pdv_rooms'));
   chan.on('postgres_changes',{event:'INSERT',schema:'public',table:'pdv_chat',filter:'room_id=eq.'+id},()=>fetchChat());
-  chan.subscribe();
-  const pollTick=()=>{poll=setTimeout(()=>{if(!ROOM_ID)return;schedule();fetchChat();pollTick()},(S.players&&S.players.length>20)?20000:10000)};
+  let subbed=false;   // se o realtime cair e voltar, eventos podem ter sido perdidos: recarrega tudo ao reconectar
+  chan.subscribe(st=>{if(st==='SUBSCRIBED'){if(subbed&&ROOM_ID)schedule();subbed=true}});
+  // aba em segundo plano: o polling espaça para 30 s e não busca o chat (o realtime continua valendo); ao voltar, recarrega tudo
+  const pollTick=()=>{poll=setTimeout(()=>{if(!ROOM_ID)return;schedule();if(!document.hidden)fetchChat();pollTick()},document.hidden?30000:(S.players&&S.players.length>20)?20000:10000)};
   pollTick();loadAll();fetchChat();
 }
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ROOM_ID){schedule();fetchChat();if(Date.now()-badgeAt>BADGE_MS)loadRoomBadges();syncClock(false)}});
 function leaveRoom(silent){
   if(chan){sb.removeChannel(chan);chan=null}
-  clearTimeout(poll);stopAudio();closePicker();stopPing();stopRoomBadges();ROOM_ID=null;loadAgain=false;$('cd').hidden=true;
+  clearTimeout(poll);stopAudio();closePicker();stopPing();stopRoomBadges();ROOM_ID=null;loadAgain=false;dirty.clear();dirtyAll=false;$('cd').hidden=true;
   if(!silent){show('home');checkActive()}
 }
 $('leave').onclick=async()=>{
@@ -1304,19 +1348,45 @@ $('leave').onclick=async()=>{
   if(error)return toast(errMsg(error));
   leaveRoom(false);
 };
-function schedule(){clearTimeout(loadT);loadT=setTimeout(()=>{if(loadBusy){loadAgain=true;return}loadAll()},120)}
+// tabelas "sujas": o evento realtime diz qual tabela mudou, então só ela (e a sala) é recarregada. schedule() sem argumento recarrega tudo
+// pedido que nunca responde não pode travar a sala: estourado o prazo, a chamada é abandonada e tentada de novo
+const withTimeout=(p,ms)=>{let t;return Promise.race([Promise.resolve(p),new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error('timeout')),ms)})]).finally(()=>clearTimeout(t))};
+let skew=null,srvOff=null,clockMissing=false;   // srvOff = (hora do servidor - hora local) em ms, medido com pdv_server_time (se o banco tiver essa função)
+async function syncClock(first){
+  if(clockMissing)return;
+  try{
+    const t0=Date.now(),{data,error}=await withTimeout(sb.rpc('pdv_server_time'),5000),t1=Date.now();
+    if(error){if(/PGRST202|42883|could not find the function|does not exist/i.test((error.code||'')+' '+(error.message||'')))clockMissing=true;return}
+    const o=Number(data)-(t0+t1)/2;if(!isFinite(o))return;
+    srvOff=o;
+    if(first&&S.room&&!S.room.paused&&!pauseAt){const ps=Date.parse(S.room.phase_started_at||'');if(isFinite(ps))phaseT0=ps-srvOff}
+  }catch(e){}
+}
+let roomState=null;   // false = o banco não tem pdv_room_state: volta às consultas por tabela
+const TABS=['pdv_players','pdv_ready','pdv_submissions','pdv_votes','pdv_results'],dirty=new Set();let dirtyAll=false;
+function schedule(t){if(t)dirty.add(t);else dirtyAll=true;clearTimeout(loadT);loadT=setTimeout(()=>{if(loadBusy){loadAgain=true;return}loadAll()},120)}
 async function loadAll(){
   const id=ROOM_ID;if(!id)return;
   if(loadBusy){loadAgain=true;return}
   loadBusy=true;
+  const want=(dirtyAll||!S.room)?TABS:TABS.filter(t=>dirty.has(t));dirty.clear();dirtyAll=false;
   try{
-    const q=t=>sb.from(t).select('*').eq('room_id',id);
-    const [r,p,rd,sm,vt,rs]=await Promise.all([sb.from('pdv_rooms').select('*').eq('id',id).single(),q('pdv_players'),q('pdv_ready'),q('pdv_submissions'),q('pdv_votes'),q('pdv_results')]);
+    const q=t=>want.includes(t)?sb.from(t).select('*').eq('room_id',id):null;   // a sala (1 linha) sempre vem; as demais só se mudaram
+    // recarga completa: 1 chamada (pdv_room_state) se o banco tiver; senão, as 6 consultas de sempre
+    let pack=null;
+    if(want.length===TABS.length&&roomState!==false){
+      const x=await withTimeout(sb.rpc('pdv_room_state',{p_room:id}),10000).catch(()=>null);
+      if(x&&x.error&&/PGRST202|42883|could not find the function|does not exist/i.test((x.error.code||'')+' '+(x.error.message||'')))roomState=false;
+      else if(x&&!x.error&&x.data&&typeof x.data==='object')pack=x.data;
+    }
+    const ok=d=>({data:d});
+    const [r,p,rd,sm,vt,rs]=pack?[pack.room?ok(pack.room):{error:{code:'PGRST116'}},ok(pack.players||[]),ok(pack.ready||[]),ok(pack.subs||[]),ok(pack.votes||[]),ok(pack.results||[])]
+      :await withTimeout(Promise.all([sb.from('pdv_rooms').select('*').eq('id',id).single(),q('pdv_players'),q('pdv_ready'),q('pdv_submissions'),q('pdv_votes'),q('pdv_results')]),10000);
     if(id!==ROOM_ID)return;
     if(r.error&&r.error.code==='PGRST116'){removedFromRoom();return}
-    if(r.error||!r.data)return;
-    const prevRoom=S.room;
-    S={room:r.data,players:p.data||[],ready:rd.data||[],subs:sm.data||[],votes:vt.data||[],results:rs.data||[]};
+    if(r.error||!r.data){dirtyAll=true;return}
+    const prevRoom=S.room,keep=(x,k)=>x?x.data||[]:S[k];
+    S={room:r.data,players:keep(p,'players'),ready:keep(rd,'ready'),subs:keep(sm,'subs'),votes:keep(vt,'votes'),results:keep(rs,'results')};
     if(S.room.paused){if(!pauseAt)pauseAt=Date.now()}
     else if(pauseAt){phaseT0+=Date.now()-pauseAt;pauseAt=null}
     if(prevRoom&&prevRoom.turn===S.room.turn&&prevRoom.phase==='input'&&S.room.phase==='input'){
@@ -1326,14 +1396,20 @@ async function loadAll(){
     const R=S.room,key=R.turn+':'+R.phase;
     if(key!==lastKey){
       const first=lastKey==='';lastKey=key;
-      phaseT0=first?Date.parse(R.phase_started_at||new Date()):Date.now();
+      // relógio da fase ancorado em phase_started_at (servidor) e não na hora em que ESTE navegador recebeu o evento: todos ficam na mesma linha
+      // do tempo. skew = menor atraso observado entre o início da fase e a chegada do evento (cobre relógio local diferente + latência)
+      const ps=Date.parse(R.phase_started_at||''),obs=Date.now()-ps;
+      if(!first&&isFinite(obs)&&Math.abs(obs)<30000)skew=skew===null?obs:Math.min(skew,obs);
+      phaseT0=isFinite(ps)?(srvOff!==null?ps-srvOff:ps+(skew!==null?skew:first?0:obs)):Date.now();
       stopAudio();songsSig='';lastCdN=null;builtIn='';editing=false;okSeen.clear();
       if(R.phase==='lobby'){lyr={};called=new Set()}
+      // ao entrar na revelação/resultado, garante que músicas, votos e resultados estão completos (um evento perdido deixaria cartões faltando)
+      if((R.phase==='reveal'||R.phase==='done')&&want.length<TABS.length){['pdv_submissions','pdv_votes','pdv_results'].forEach(t=>dirty.add(t));schedule('pdv_rooms')}
       if(R.phase==='reveal')fetchLyrics();
     }
     render();
-  }catch(e){console.warn('Falha ao sincronizar a sala',e)}
-  finally{loadBusy=false;if(loadAgain&&ROOM_ID){loadAgain=false;schedule()}}
+  }catch(e){dirtyAll=true;console.warn('Falha ao sincronizar a sala',e);setTimeout(()=>{if(ROOM_ID)schedule()},2000)}
+  finally{loadBusy=false;if(loadAgain&&ROOM_ID){loadAgain=false;schedule('pdv_rooms')}}
 }
 
 /* ---------- helpers de estado ---------- */
@@ -1534,7 +1610,10 @@ async function giveUp(){
 }
 // chamada à função de validação; devolve {data} ou {error: código}
 async function submitSongServer(artist,track){
-  const {data,error}=await sb.functions.invoke('submit-song',{body:{room_id:ROOM_ID,artist,track}});
+  let r;
+  // sem resposta em 20 s: libera o botão e recarrega a sala (o servidor pode ter registrado a música mesmo assim)
+  try{r=await withTimeout(sb.functions.invoke('submit-song',{body:{room_id:ROOM_ID,artist,track}}),20000)}catch(e){schedule();return{error:'submit_timeout'}}
+  const {data,error}=r;
   if(!error)return{data};
   let code='submit_failed';
   try{const j=await error.context.json();if(j&&j.error)code=j.error}catch(e){}
@@ -1745,10 +1824,34 @@ function renderHistory(){
 /* ---------- relógio da partida (todos) + condução (só o admin) ---------- */
 function hostCall(tag,fn,args){
   const k=lastKey+tag;if(called.has(k))return;called.add(k);
-  sb.rpc(fn,args).then(({error})=>{if(error){setTimeout(()=>called.delete(k),700);console.warn(fn,error.message)}else schedule()});
+  withTimeout(sb.rpc(fn,args),8000).then(({error})=>{if(error){setTimeout(()=>called.delete(k),700);console.warn(fn,error.message)}else schedule()}).catch(e=>{setTimeout(()=>called.delete(k),700);console.warn(fn,e.message)});
 }
-setInterval(()=>{
+// plano B se o admin parou (aba em segundo plano, conexão ruim): passados FB_MS além do prazo do admin, os outros jogadores
+// tentam a mesma RPC de avanço, escalonados por jogador. Se o servidor recusar (só o admin pode), o erro é ignorado e não há nova tentativa
+const FB_MS=6000;
+// o admin só encerra a fase de escolha "porque todos responderam" depois de conferir no servidor (jogadores e prontos atuais):
+// com a lista de jogadores desatualizada na tela dele (ex.: 1/1 com a sala cheia), encerraria o turno na hora e cortaria quem ainda busca
+const allChk={k:'',ok:false,t:0,busy:false};
+function confirmAll(R){
+  if(allChk.k===lastKey&&allChk.ok)return true;
+  if(allChk.busy||(allChk.k===lastKey&&Date.now()-allChk.t<2000))return false;
+  allChk.busy=true;allChk.k=lastKey;allChk.ok=false;const rid=ROOM_ID,turn=R.turn;
+  withTimeout(Promise.all([sb.from('pdv_players').select('user_id,first_turn').eq('room_id',rid),sb.from('pdv_ready').select('user_id').eq('room_id',rid).eq('turn',turn)]),8000).then(([p,r])=>{
+    if(!p.data||!r.data||rid!==ROOM_ID)return;
+    const act=p.data.filter(x=>(x.first_turn||1)<=turn);
+    allChk.ok=act.length>0&&act.every(x=>r.data.some(y=>y.user_id===x.user_id));
+    if(p.data.length!==S.players.length||r.data.length!==S.ready.filter(x=>x.turn===turn).length)schedule();
+  }).catch(()=>{}).finally(()=>{allChk.busy=false;allChk.t=Date.now()});
+  return false;
+}
+function fbWait(){const R=S.room;if(!R||!user||isHost())return -1;const ids=S.players.map(p=>p.user_id).filter(u=>u!==R.host_id).sort(),i=ids.indexOf(user.id);return i<0?-1:FB_MS+Math.min(i,4)*1500}
+function fbCall(tag,fn,args){
+  const k=lastKey+'fb'+tag;if(called.has(k))return;called.add(k);
+  Promise.resolve(sb.rpc(fn,args)).then(({error})=>{if(!error)schedule()}).catch(()=>{});
+}
+function clockTick(){
   const R=S.room;if(!R||!ROOM_ID)return;
+  const fw=fbWait();
   if(popupWatch())render();
   if(window.__pop)updatePopup();
   renderStreamNote(R);
@@ -1764,6 +1867,7 @@ setInterval(()=>{
     const n=COUNT_SECS-Math.floor(age/1000),lab=n>0?n:tr('VAI!');
     if(lab!==lastCdN){lastCdN=lab;const el=$('cdn');el.textContent=lab;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');beep(n>0?660:1040,n>0?.18:.5)}
     if(isHost()&&age>=3100)hostCall('bi','pdv_begin_input',{p_room:ROOM_ID});
+    else if(fw>=0&&age>=3100+fw)fbCall('bi','pdv_begin_input',{p_room:ROOM_ID});
   }else cd.hidden=true;
   if(R.phase==='input'&&builtIn==='in'+R.turn&&Date.now()-(tick.ri||0)>500){tick.ri=Date.now();renderInput()}
   if(R.phase==='input'){
@@ -1773,7 +1877,8 @@ setInterval(()=>{
     tm.textContent=all?tr('Todos responderam — revelando…'):left>0?'⏱ '+left+'s':tr('Aguardando envios…');
     if(!all&&Date.now()<flashUntil){const f=document.createElement('span');f.className='flash';f.textContent=flashText;tm.appendChild(f)}
     tm.classList.toggle('urgent',!all&&left>0&&left<=5);
-    if(isHost()&&((all&&age>700)||age>=dur+3200))hostCall('br','pdv_begin_reveal',{p_room:ROOM_ID});
+    if(isHost()&&((all&&age>700&&confirmAll(R))||age>=dur+3200))hostCall('br','pdv_begin_reveal',{p_room:ROOM_ID});
+    else if(fw>=0&&((all&&age>700+fw)||age>=dur+3200+fw))fbCall('br','pdv_begin_reveal',{p_room:ROOM_ID});
   }
   if(R.phase!=='input')$('timer').classList.remove('urgent');
   if(R.phase==='reveal'){
@@ -1784,14 +1889,18 @@ setInterval(()=>{
     if(audio&&idx<n){const bar=document.querySelector(`#c${idx} .bar i`);if(bar)bar.style.width=Math.min((age%sm)/sm,1)*100+'%'}
     if(idx>=n&&audio){stopAudio()}
     if(isHost()&&age>=total)hostCall('fin','pdv_finalize_turn',{p_room:ROOM_ID});
+    else if(fw>=0&&age>=total+fw)fbCall('fin','pdv_finalize_turn',{p_room:ROOM_ID});
   }
   if(R.phase==='done'){
     $('timer').textContent=tr('Próximo turno em {s}s',{s:Math.max(0,Math.ceil((NEXT_TURN_MS-age)/1000))});
     if(isHost()&&age>=NEXT_TURN_MS)hostCall('nx','pdv_next_turn',{p_room:ROOM_ID});
+    else if(fw>=0&&age>=NEXT_TURN_MS+fw)fbCall('nx','pdv_next_turn',{p_room:ROOM_ID});
   }
   if(R.phase!=='reveal'){tick.cur=-1}
   if(R.phase==='done')showCarousel(-1);
-},100);
+}
+// o relógio roda num Worker: timers de aba em segundo plano são reduzidos (até 1x/min) e congelavam o jogo quando o admin saía da aba
+try{const w=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),100)'],{type:'text/javascript'})));w.onmessage=clockTick;w.onerror=()=>{w.terminate();setInterval(clockTick,100)}}catch(e){setInterval(clockTick,100)}
 function tick(){}tick.cur=-1;
 // carrossel: só a música que está tocando fica visível; as outras somem (cada uma volta a aparecer só na sua vez)
 function showCarousel(idx){
